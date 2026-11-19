@@ -42,7 +42,9 @@ PROCEDURE_WORDS = re.compile(
     r"what do (i|we|you) need|requirements? (to|for)|dispute|refund|freeze|replac|verif|escalat|"
     r"unlock|reorder|reimburse|waive|(to|i|we|customer wants to|can i) (open|close|apply|file|submit|transfer|"
     r"cancel|upgrade|downgrade|report|order|request|add|remove|change|update))", re.I)
-COMPARE_WORDS = re.compile(r"\b(compare|best|which|highest|lowest|all|every|list|rank|options?|eligible)\b", re.I)
+COMPARE_WORDS = re.compile(
+    r"\b(compare|best|which|highest|lowest|all|every|list|rank|options?|eligible|offers?|offered|available|"
+    r"products|types|kinds)\b", re.I)
 
 SYNTH_SYSTEM = (
     "You are an internal knowledge service. Answer ONLY from the evidence provided. "
@@ -58,6 +60,7 @@ def _category_terms(cat: str) -> list[str]:
     terms = {words, words.rstrip("s")}
     if words.endswith("accounts"):
         terms.add(words[: -len(" accounts")])
+    terms.discard("bank")  # "Rho-Bank" appears everywhere; not a category signal
     return sorted(terms, key=len, reverse=True)
 
 
@@ -106,7 +109,7 @@ class Engine:
                 cats = list(filt["category"])
         tools = sorted(set(TOOL_RE.findall(ask)))
         return {
-            "entities": entities[:4],
+            "entities": entities[:5],
             "categories": cats,
             "tools": tools,
             "procedural": bool(PROCEDURE_WORDS.search(ask)),
@@ -138,12 +141,25 @@ class Engine:
                     sheet_docs.update(srcs)
                     sections.append((f"Fact sheet: {ent}", body, srcs))
 
-        # 2) rosters for comparative / category asks
+        elif len(plan["entities"]) > 2:  # several named products: key figures for each
+            from nexus_lite.compiler import key_figures
+
+            lines, srcs = [], []
+            for ent in plan["entities"]:
+                lines.append(f"### {ent}")
+                for kind, t, d in key_figures(ctx.conn.cursor(), ent, limit=8):
+                    lines.append(f"- ({kind}) {t[:200]} [{d}]")
+                    srcs.append(d)
+            sections.append(("Fact sheet: key figures", "\n".join(lines), srcs))
+
+        # 2) rosters for comparative / category asks (most specific category first)
         if plan["comparative"] or (plan["categories"] and not plan["entities"]):
+            n = max(1, min(2, len(plan["categories"])))
             for cat in plan["categories"][:2]:
                 art = ctx.artifact(f"roster:{cat}")
                 if art:
-                    sections.append((f"Roster: {cat}", art["body"][: max_chars // 3], json.loads(art["sources"])))
+                    sections.append((f"Roster: {cat}", art["body"][: max_chars // (2 * n)],
+                                     json.loads(art["sources"])))
 
         # 3) procedures from top docs (+ explicitly named tools)
         if plan["procedural"] or plan["tools"]:

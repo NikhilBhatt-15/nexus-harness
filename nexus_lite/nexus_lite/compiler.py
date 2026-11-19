@@ -145,6 +145,31 @@ def extract_doc(conn: sqlite3.Connection, doc: Document, entity_names: dict[str,
                         (doc.entity, ent, doc.id, "mentions"))
 
 
+KEY_KIND_ORDER = ["cashback", "apy", "annual_fee", "monthly_fee", "bonus", "foreign", "atm", "overdraft", "fee",
+                  "wire", "deposit"]
+
+
+def key_figures(cur, entity: str, limit: int = 6) -> list[tuple[str, str, str]]:
+    """Most decision-relevant fact lines for an entity: one per kind first (rewards, APY, fees, ...),
+    then fill; near-duplicate lines are skipped."""
+    rows = cur.execute(
+        f"SELECT kind, text, doc_id FROM facts WHERE entity=? AND kind IN ({','.join('?' * len(KEY_KIND_ORDER))}) "
+        "ORDER BY id", (entity, *KEY_KIND_ORDER)).fetchall()
+    rows.sort(key=lambda r: KEY_KIND_ORDER.index(r[0]))
+    picked, seen_kinds, seen_text = [], set(), set()
+    for pass_ in (0, 1):
+        for k, t, d in rows:
+            sig = re.sub(r"\W+", " ", t.lower())[:60]
+            if sig in seen_text or (pass_ == 0 and k in seen_kinds):
+                continue
+            picked.append((k, t, d))
+            seen_kinds.add(k)
+            seen_text.add(sig)
+            if len(picked) >= limit:
+                return picked
+    return picked
+
+
 def build_corpus_artifacts(conn: sqlite3.Connection, docs: list[Document], max_sheet_chars: int = 24000) -> None:
     """Rebuild corpus-scope tables/artifacts (cheap; always recomputed)."""
     cur = conn.cursor()
@@ -238,12 +263,8 @@ def build_corpus_artifacts(conn: sqlite3.Connection, docs: list[Document], max_s
         for ent in sorted(ents):
             name = by_entity[ent][0].entity_name
             lines.append(f"## {name}  (entity `{ent}`, {len(by_entity[ent])} docs)")
-            rows = cur.execute(
-                "SELECT kind, text, doc_id FROM facts WHERE entity=? AND kind IN "
-                "('apy','annual_fee','monthly_fee','cashback','bonus','foreign','atm','overdraft','fee') "
-                "ORDER BY id LIMIT 14", (ent,)).fetchall()
-            for k, t, doc in rows:
-                lines.append(f"- ({k}) {t} [{doc}]")
+            for k, t, doc in key_figures(cur, ent, limit=6):
+                lines.append(f"- ({k}) {t[:180]} [{doc}]")
                 sources.append(doc)
             lines.append("")
         cur.execute("INSERT INTO artifacts VALUES(?,?,?,?,?,?,?)",
