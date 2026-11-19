@@ -83,6 +83,8 @@ def get_environment(
     tools = build_tools(
         variant, db, knowledge_base, read_log_allowlist=read_log_allowlist
     )
+    if task is not None and hasattr(tools, "_nexus_client"):
+        tools._task_id = task.id  # per-task join key for NEXUS_USAGE_LOG
     user_tools = KnowledgeUserTools(db)
     policy = build_policy(variant, knowledge_base, task)
 

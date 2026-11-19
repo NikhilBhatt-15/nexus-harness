@@ -15,6 +15,7 @@ Replaces the 18 ``RetrievalConfig`` subclasses in
 from __future__ import annotations
 
 import logging
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,6 +36,8 @@ from tau2.domains.banking_knowledge.retrieval_toolkits import (
     KnowledgeToolsWithGrep,
     KnowledgeToolsWithKBSearch,
     KnowledgeToolsWithKBSearchAndGrep,
+    KnowledgeToolsWithNexus,
+    KnowledgeToolsWithNexusRouter,
     KnowledgeToolsWithShell,
 )
 from tau2.domains.banking_knowledge.tools import KnowledgeTools
@@ -55,7 +58,9 @@ PROMPTS_DIR = DATA_DIR / "tau2" / "domains" / "banking_knowledge" / "prompts"
 COMPONENTS_DIR = PROMPTS_DIR / "components"
 
 # Default variant used when no explicit retrieval_variant is provided.
-DEFAULT_RETRIEVAL_VARIANT = "alltools"
+# Override with TAU2_DEFAULT_RETRIEVAL_VARIANT (e.g. "no_knowledge" to regrade trajectories offline:
+# replay skips read-only and unknown tools, so grading does not depend on retrieval).
+DEFAULT_RETRIEVAL_VARIANT = os.environ.get("TAU2_DEFAULT_RETRIEVAL_VARIANT", "alltools")
 
 DEFAULT_DENSE_EMBEDDING_MODEL_OPENAI = "text-embedding-3-large"
 DEFAULT_DENSE_EMBEDDING_MODEL_OPENROUTER = "qwen3-embedding-8b"
@@ -308,6 +313,20 @@ class GrepSpec:
 
 
 @dataclass
+class NexusSpec:
+    """A compiled knowledge layer reached through ``NexusClient``.
+
+    ``context``/``url`` of ``None`` fall back to ``NEXUS_CONTEXT``/``NEXUS_URL``
+    (``NEXUS_URL`` defaults to ``inproc`` = local nexus-lite engine).
+    """
+
+    context: Optional[str] = None
+    url: Optional[str] = None
+    timeout_seconds: int = 600
+    router: bool = False  # True -> expose SQL/artifact/search tools instead of KB_query
+
+
+@dataclass
 class ShellSpec:
     """Specification for a shell sandbox."""
 
@@ -395,6 +414,7 @@ class RetrievalVariant:
     kb_search_dense: Optional[PipelineSpec] = None  # AllTools: dense KB_search_dense
     grep: Optional[GrepSpec] = None  # None -> no grep tool
     shell: Optional[ShellSpec] = None  # None -> no shell tool
+    nexus: Optional[NexusSpec] = None  # None -> no KB_query tool
     supports_top_k: bool = False
 
 
@@ -425,6 +445,24 @@ def all_tools_variant(
 # ---------------------------------------------------------------------------
 
 RETRIEVAL_VARIANTS: Dict[str, RetrievalVariant] = {
+    "nexus": RetrievalVariant(
+        name="nexus",
+        prompt_template=PROMPTS_DIR / "nexus.md",
+        build_prompt=standard_prompt,
+        nexus=NexusSpec(),
+    ),
+    "nexus_router": RetrievalVariant(
+        name="nexus_router",
+        prompt_template=PROMPTS_DIR / "nexus_router.md",
+        build_prompt=standard_prompt,
+        nexus=NexusSpec(router=True),
+    ),
+    "nexus_multiturn": RetrievalVariant(
+        name="nexus_multiturn",
+        prompt_template=PROMPTS_DIR / "nexus_multiturn.md",
+        build_prompt=standard_prompt,
+        nexus=NexusSpec(),
+    ),
     "no_knowledge": RetrievalVariant(
         name="no_knowledge",
         prompt_template=PROMPTS_DIR / "no_knowledge.md",
@@ -636,6 +674,9 @@ def resolve_variant(
     grep_top_k: Optional[int] = None,
     case_sensitive: Optional[bool] = None,
     reranker_min_score: Optional[int] = None,
+    nexus_context: Optional[str] = None,
+    nexus_url: Optional[str] = None,
+    nexus_timeout: Optional[int] = None,
     **_extra: Any,
 ) -> RetrievalVariant:
     """Look up a variant by name and apply optional overrides.
@@ -672,6 +713,13 @@ def resolve_variant(
         variant.kb_search_bm25.reranker_min_score = reranker_min_score
     if reranker_min_score is not None and variant.kb_search_dense is not None:
         variant.kb_search_dense.reranker_min_score = reranker_min_score
+    if variant.nexus is not None:
+        if nexus_context is not None:
+            variant.nexus.context = nexus_context
+        if nexus_url is not None:
+            variant.nexus.url = nexus_url
+        if nexus_timeout is not None:
+            variant.nexus.timeout_seconds = nexus_timeout
 
     return variant
 
@@ -752,7 +800,20 @@ def build_tools(
         and variant.kb_search_dense is not None
         and variant.shell is not None
     )
-    if has_all_tools:
+    if variant.nexus is not None and variant.nexus.router:
+        from tau2.domains.banking_knowledge.nexus_client import load_local_context
+
+        tools = KnowledgeToolsWithNexusRouter(db, load_local_context(variant.nexus.context))
+    elif variant.nexus is not None:
+        from tau2.domains.banking_knowledge.nexus_client import NexusClient
+
+        client = NexusClient(
+            context=variant.nexus.context,
+            url=variant.nexus.url,
+            timeout_seconds=variant.nexus.timeout_seconds,
+        )
+        tools = KnowledgeToolsWithNexus(db, client)
+    elif has_all_tools:
         bm25_pipeline = _create_kb_pipeline(variant.kb_search_bm25, knowledge_base)
         dense_pipeline = _create_kb_pipeline(variant.kb_search_dense, knowledge_base)
         sandbox = _create_sandbox(knowledge_base, variant.shell)
@@ -798,7 +859,14 @@ def build_policy(
     Delegates to the variant's ``build_prompt`` callable, then validates
     the result is non-empty.
     """
-    policy = variant.build_prompt(variant.prompt_template, knowledge_base, task)
+    template_path = variant.prompt_template
+    override = os.environ.get("TAU2_NEXUS_POLICY_FILE", "").strip()
+    if override and variant.nexus is not None:
+        # Frozen instruction packs (configs/packs/<pack>/policy.md) replace the variant template.
+        template_path = Path(override).expanduser()
+        if not template_path.is_file():
+            raise FileNotFoundError(f"TAU2_NEXUS_POLICY_FILE not found: {template_path}")
+    policy = variant.build_prompt(template_path, knowledge_base, task)
 
     if variant.kb_search_bm25 is not None and variant.kb_search_dense is not None:
         dense_block = format_all_tools_dense_instructions(variant)

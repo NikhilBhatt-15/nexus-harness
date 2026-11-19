@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nexus-lite"
+version = "0.1.0"
+description = "Open, local knowledge engine modeled on Pinecone Nexus: compile a corpus into typed artifacts, answer KnowQL-style queries with citations."
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+    "numpy>=1.24",
+    "rank-bm25>=0.2.2",
+    "httpx>=0.24",
+    "fastapi>=0.115",
+    "uvicorn>=0.34",
+]
+
+[project.optional-dependencies]
+llm = ["litellm>=1.80"]
+
+[project.scripts]
+nexus-lite = "nexus_lite.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["nexus_lite"]

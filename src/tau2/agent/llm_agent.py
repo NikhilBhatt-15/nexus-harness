@@ -31,14 +31,35 @@ You cannot do both at the same time.
 Try to be helpful and always follow the policy. Always make sure you generate valid JSON only.
 """.strip()
 
+HARD_RULES_NOTE = "When <hard_rules> are present, they OVERRIDE conflicting softer guidance in <policy>. Follow them first."
+
 SYSTEM_PROMPT = """
 <instructions>
 {agent_instruction}
 </instructions>
-<policy>
+{hard_rules_block}<policy>
 {domain_policy}
 </policy>
 """.strip()
+
+
+def load_hard_rules_block() -> str:
+    """Optional high-priority rules placed before <policy> in the system prompt.
+
+    ``TAU2_AGENT_HARD_RULES`` (inline text) or ``TAU2_AGENT_HARD_RULES_FILE`` (path).
+    Empty when unset, so the default scaffold is unchanged.
+    """
+    import os
+    from pathlib import Path
+
+    text = os.environ.get("TAU2_AGENT_HARD_RULES", "").strip()
+    path = os.environ.get("TAU2_AGENT_HARD_RULES_FILE", "").strip()
+    if not text and path:
+        try:
+            text = Path(path).expanduser().read_text(encoding="utf-8").strip()
+        except OSError as e:
+            logger.warning(f"TAU2_AGENT_HARD_RULES_FILE unreadable ({path}): {e}")
+    return f"<hard_rules>\n{text}\n</hard_rules>\n" if text else ""
 
 
 class LLMAgentState(BaseModel):
@@ -87,8 +108,12 @@ class LLMAgent(
 
     @property
     def system_prompt(self) -> str:
+        hard_rules = load_hard_rules_block()
+        instruction = AGENT_INSTRUCTION + ("\n" + HARD_RULES_NOTE if hard_rules else "")
         return SYSTEM_PROMPT.format(
-            domain_policy=self.domain_policy, agent_instruction=AGENT_INSTRUCTION
+            domain_policy=self.domain_policy,
+            agent_instruction=instruction,
+            hard_rules_block=hard_rules,
         )
 
     def get_init_state(

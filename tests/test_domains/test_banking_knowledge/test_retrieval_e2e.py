@@ -144,6 +144,13 @@ _ALL_VARIANTS = [
         {"KB_search_bm25", "KB_search_dense", "shell"},
         "all_tools_qwen",
     ),
+    ("nexus", {"KB_query"}, "nexus_ctx"),
+    ("nexus_multiturn", {"KB_query"}, "nexus_ctx"),
+    (
+        "nexus_router",
+        {"KB_orient", "KB_sql", "KB_read_artifact", "KB_read_source", "KB_search_passages"},
+        "nexus_ctx",
+    ),
 ]
 
 
@@ -158,6 +165,16 @@ def _api_mark(gate):
         return requires_all_tools_deps
     if gate == "all_tools_qwen":
         return requires_all_tools_qwen_deps
+    if gate == "nexus_ctx":
+        # Needs a compiled nexus-lite context: `nexus-lite build --slug banking ...`
+        from pathlib import Path as _P
+
+        root = os.environ.get("NEXUS_LITE_ROOT", "contexts")
+        os.environ.setdefault("NEXUS_CONTEXT", "banking")
+        return pytest.mark.skipif(
+            not (_P(root) / os.environ["NEXUS_CONTEXT"] / "context.sqlite").exists(),
+            reason="no compiled nexus-lite context",
+        )
     return pytest.mark.skipif(False, reason="")
 
 

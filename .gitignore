@@ -224,3 +224,10 @@ data/simulations/.credentials/
 
 # Cursor IDE
 .cursor/
+
+# nexus-harness
+contexts/
+data/published/
+configs/packs/matched/
+.venv/
+*.nexus_usage.jsonl

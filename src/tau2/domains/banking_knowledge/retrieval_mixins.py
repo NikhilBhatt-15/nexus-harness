@@ -180,6 +180,119 @@ class ShellMixin(metaclass=ToolKitType):
         return stdout if stdout else "(no output)"
 
 
+class NexusQueryMixin(metaclass=ToolKitType):
+    """MixIn that provides KB_query, backed by a compiled knowledge context.
+
+    Expects ``self._nexus_client`` (a NexusClient) set by the concrete class.
+    """
+
+    @is_tool(ToolType.READ)
+    def KB_query(self, question: str) -> str:
+        """Ask the bank's knowledge service about products, policies, fees, eligibility, or procedures.
+
+        Returns compiled, cited knowledge (product fact sheets, procedure steps with the exact
+        internal tool names, and the most relevant policy passages). Ask one specific,
+        self-contained question per call and name the exact product, e.g. "What is the monthly
+        maintenance fee for the Sky Blue business checking account and how is it waived?".
+        For procedures, ask for the ordered steps and the exact tool names and arguments.
+
+        Args:
+            question: A specific natural-language question about bank products, policies, fees,
+                limits, eligibility, or procedures.
+
+        Returns:
+            Compiled knowledge with document citations.
+        """
+        return self._nexus_client.query(question, task_id=getattr(self, "_task_id", None))
+
+
+class NexusRouterMixin(metaclass=ToolKitType):
+    """Direct access to a compiled nexus-lite context (router mode).
+
+    Expects ``self._nexus_ctx`` (a ``nexus_lite.context.Context``).
+    """
+
+    @is_tool(ToolType.READ)
+    def KB_orient(self) -> str:
+        """Overview of the compiled knowledge: tables, columns, entities and artifact names. Call once first.
+
+        Returns:
+            Schema and catalog of the compiled knowledge base.
+        """
+        ctx = self._nexus_ctx
+        tables = ctx.sql("SELECT name, sql FROM sqlite_master WHERE type='table'")
+        ents = ctx.sql("SELECT entity, entity_name, category, doc_count FROM entities ORDER BY category, entity")
+        lines = ["# Compiled knowledge", "", "## SQL tables (read-only, SQLite)"]
+        lines += [f"- {t['sql']}" for t in tables]
+        lines += ["", "## Entities (category: entity -> name)"]
+        lines += [f"- {e['category']}: {e['entity']} -> {e['entity_name']} ({e['doc_count']} docs)" for e in ents]
+        lines += ["", "## Artifacts: `fact_sheet:<entity>`, `roster:<category>`, `tool:<tool_name>` "
+                  "(read with KB_read_artifact)",
+                  "Tips: facts(kind,text) holds fee/rate/limit lines; procedures holds numbered steps with "
+                  "tool_name; tools lists internal tool names with argument hints."]
+        return "\n".join(lines)
+
+    @is_tool(ToolType.READ)
+    def KB_sql(self, query: str) -> str:
+        """Run a read-only SQL SELECT over the compiled knowledge tables (see KB_orient). Max 50 rows.
+
+        Args:
+            query: A SQLite SELECT statement.
+
+        Returns:
+            Rows as JSON lines, or an error message.
+        """
+        import json as _json
+
+        try:
+            rows = self._nexus_ctx.sql(query)
+        except Exception as e:
+            return f"SQL error: {e}"
+        out = "\n".join(_json.dumps(r, ensure_ascii=False) for r in rows[:50])
+        return (out or "(no rows)") + (f"\n... {len(rows) - 50} more rows" if len(rows) > 50 else "")
+
+    @is_tool(ToolType.READ)
+    def KB_read_artifact(self, name: str) -> str:
+        """Read one compiled artifact, e.g. `fact_sheet:sky_blue`, `roster:credit_cards`, `tool:open_bank_account_4821`.
+
+        Args:
+            name: Artifact name.
+
+        Returns:
+            The artifact body.
+        """
+        art = self._nexus_ctx.artifact(name)
+        return art["body"] if art else f"No artifact named {name!r}. Use KB_orient to list names."
+
+    @is_tool(ToolType.READ)
+    def KB_read_source(self, doc_id: str) -> str:
+        """Read the full text of one source document by its id (as cited in other results).
+
+        Args:
+            doc_id: Document id, e.g. `doc_credit_cards_ecocard_001`.
+
+        Returns:
+            The document text.
+        """
+        return self._nexus_ctx.read_source(doc_id) or f"No document {doc_id!r}."
+
+    @is_tool(ToolType.READ)
+    def KB_search_passages(self, query: str, k: int = 6) -> str:
+        """Hybrid (BM25 + dense) search over source passages. Use when SQL/artifacts cannot locate the doc.
+
+        Args:
+            query: Natural-language search query.
+            k: Number of passages (default 6).
+
+        Returns:
+            Ranked passages with their document ids.
+        """
+        ctx = self._nexus_ctx
+        hits = ctx.index.search(query, k=int(k))
+        return "\n\n".join(f"{i}. [{ctx.chunk_doc[c]}]\n{ctx.chunk_text[c]}" for i, (c, _) in enumerate(hits, 1)) \
+            or "No results."
+
+
 class RewriteContextMixin(metaclass=ToolKitType):
     """MixIn that provides the rewrite_context tool for summarization."""
 

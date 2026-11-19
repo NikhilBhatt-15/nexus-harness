@@ -21,6 +21,8 @@ from tau2.domains.banking_knowledge.retrieval_mixins import (
     KBSearchBm25AllToolsMixin,
     KBSearchDenseAllToolsMixin,
     KBSearchMixin,
+    NexusQueryMixin,
+    NexusRouterMixin,
     ShellMixin,
 )
 from tau2.domains.banking_knowledge.tools import KnowledgeTools
@@ -110,3 +112,26 @@ class KnowledgeToolsAllTools(
         self._kb_bm25_pipeline = kb_bm25_pipeline
         self._kb_dense_pipeline = kb_dense_pipeline
         self._sandbox = sandbox
+
+
+class KnowledgeToolsWithNexus(NexusQueryMixin, KnowledgeTools):
+    """Base banking tools + KB_query (compiled knowledge layer: nexus-lite or Nexus v0 API).
+
+    Used by: nexus, nexus_multiturn.
+    """
+
+    def __init__(self, db: "TransactionalDB", nexus_client):
+        super().__init__(db)
+        self._nexus_client = nexus_client
+        self._task_id = None
+
+
+class KnowledgeToolsWithNexusRouter(NexusRouterMixin, KnowledgeTools):
+    """Base banking tools + direct SQL/artifact/search access to a nexus-lite context.
+
+    Used by: nexus_router.
+    """
+
+    def __init__(self, db: "TransactionalDB", nexus_ctx):
+        super().__init__(db)
+        self._nexus_ctx = nexus_ctx

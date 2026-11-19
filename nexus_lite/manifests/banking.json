@@ -1,0 +1,58 @@
+{
+  "curate": {
+    "chunks": {"chunking": {"target_size": 768, "overlap": 128}},
+    "artifacts": {
+      "enabled": true,
+      "artifact_types": [
+        {
+          "name": "product",
+          "kind": "entity",
+          "scope": "document",
+          "format": "sqlite",
+          "description": "One row per bank product described in this document (account, card, BNPL plan, subscription). Skip documents that describe no specific product.",
+          "columns": [
+            {"name": "product", "description": "Exact product name as written in the document title or heading"},
+            {"name": "family", "description": "personal or business"},
+            {"name": "product_class", "description": "checking | savings | credit_card | bnpl | subscription | other"},
+            {"name": "tool_enum", "description": "Exact string the tools expect for this product (account_class or card_type), copied verbatim"},
+            {"name": "annual_fee", "description": "Annual fee with $, including first-year waivers"},
+            {"name": "monthly_fee", "description": "Monthly maintenance fee and how it is waived"},
+            {"name": "apy", "description": "APY or rate, including tiers and boosts"},
+            {"name": "rewards", "description": "Cash back / points rates by category"},
+            {"name": "signup_bonus", "description": "Sign-up bonus and its offer window"},
+            {"name": "foreign_fee", "description": "Foreign transaction fee"},
+            {"name": "atm_terms", "description": "ATM fees, free withdrawals per month, rebate caps"},
+            {"name": "eligibility", "description": "Eligibility and opening requirements"}
+          ]
+        },
+        {
+          "name": "procedure_step",
+          "kind": "entity",
+          "scope": "document",
+          "format": "sqlite",
+          "description": "Ordered steps of internal procedures (opening, closing, disputes, transfers, refunds, retention). One row per step.",
+          "columns": [
+            {"name": "procedure", "description": "Procedure name"},
+            {"name": "step_ord", "description": "Step number"},
+            {"name": "action", "description": "What to do in this step"},
+            {"name": "tool_name", "description": "Exact internal tool name if the step uses one (e.g. open_bank_account_4821)"},
+            {"name": "arguments", "description": "Argument names and allowed values for the tool, verbatim"},
+            {"name": "check", "description": "Precondition, eligibility check or trap to avoid"}
+          ]
+        },
+        {
+          "name": "transfer_rule",
+          "kind": "entity",
+          "scope": "document",
+          "format": "sqlite",
+          "description": "Rules for transferring a customer to a human agent.",
+          "columns": [
+            {"name": "reason_code", "description": "Exact reason code string"},
+            {"name": "when_to_use", "description": "Conditions that call for this code"},
+            {"name": "do_not_use_when", "description": "Conditions where this code is wrong"}
+          ]
+        }
+      ]
+    }
+  }
+}

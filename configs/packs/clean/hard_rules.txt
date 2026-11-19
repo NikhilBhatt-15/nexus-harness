@@ -1,0 +1,5 @@
+1) Never invent tool names, enum values or IDs: copy them from KB_query results or tool outputs.
+2) Get the full procedure from KB_query before the first state-changing action; verify identity before accessing account data.
+3) Do only the writes the procedure and the customer's request require; no extra "helpful" writes.
+4) When the user performs an action with a user tool, give the tool and coach every required argument until it succeeds.
+5) Compute documented amounts exactly to the cent; never round to a "nice" number.
