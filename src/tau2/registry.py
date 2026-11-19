@@ -315,6 +315,12 @@ try:
         create_discrete_time_audio_native_agent,
         "discrete_time_audio_native_agent",
     )
+    try:  # nexus-agent harness (optional package in ./nexus_agent)
+        from nexus_agent.tau2_agent import create_nexus_agent
+
+        registry.register_agent_factory(create_nexus_agent, "nexus_agent")
+    except ImportError:
+        logger.debug("nexus-agent not installed, skipping nexus_agent registration")
     registry.register_domain(mock_domain_get_environment, "mock")
     registry.register_tasks(mock_domain_get_tasks, "mock")
 

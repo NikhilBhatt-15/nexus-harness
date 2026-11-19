@@ -1,0 +1,34 @@
+# nxa eval examples/shop-ops/suite.yaml -m gemini/gemini-3.1-flash-lite
+name: shop-ops
+model: gemini/gemini-3.1-flash-lite
+tasks:
+  - id: top-spender
+    task: Which customer has spent the most on delivered orders? Reply with their name and the total.
+    workspace: workspace
+    tools: sqlite=shop.db
+    checks:
+      - answer_contains: Alice
+      - answer_regex: '455.5'
+  - id: refund-in-window
+    system: Today is 2026-11-20.
+    task: Bob Singh wants to return the blender from order 103. Process it according to our returns policy.
+    workspace: workspace
+    tools: sqlite=shop.db,kb=shop-policies@docs
+    checks:
+      - sql: {db: shop.db, query: "SELECT status FROM orders WHERE id=103", equals: returned}
+      - sql: {db: shop.db, query: "SELECT amount FROM credits WHERE customer_id=2 AND reason='return:103'", equals: 89.99}
+  - id: refund-outside-window-gold
+    system: Today is 2026-11-20.
+    task: Chen Wei wants to return the stand mixer from order 104. Handle it per policy.
+    workspace: workspace
+    tools: sqlite=shop.db,kb=shop-policies@docs
+    checks:
+      - sql: {db: shop.db, query: "SELECT status FROM orders WHERE id=104", equals: delivered}
+      - sql: {db: shop.db, query: "SELECT amount FROM credits WHERE reason='goodwill:104'", equals: 31.0}
+  - id: report-file
+    task: Write a CSV file report.csv with columns customer,orders,total for delivered orders per customer, sorted by total descending.
+    workspace: workspace
+    tools: files,sqlite=shop.db
+    checks:
+      - file_contains: {path: report.csv, text: "Alice Rao"}
+      - command: {run: "python -c \"import csv;r=list(csv.DictReader(open('report.csv')));assert r[0]['customer']=='Alice Rao' and float(r[0]['total'])==455.5, r\"", exit_code: 0}

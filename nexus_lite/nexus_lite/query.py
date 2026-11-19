@@ -157,7 +157,7 @@ class Engine:
             n = max(1, min(2, len(plan["categories"])))
             for cat in plan["categories"][:2]:
                 art = ctx.artifact(f"roster:{cat}")
-                if art:
+                if art and "\n- (" in art["body"]:  # skip rosters without any key figures
                     sections.append((f"Roster: {cat}", art["body"][: max_chars // (2 * n)],
                                      json.loads(art["sources"])))
 

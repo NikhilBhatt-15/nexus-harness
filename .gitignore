@@ -231,3 +231,6 @@ data/published/
 configs/packs/matched/
 .venv/
 *.nexus_usage.jsonl
+examples/*/workspace/*.db
+examples/*/.nxa/
+.nxa/

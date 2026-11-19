@@ -9,6 +9,8 @@ Pinecone Nexus is a "knowledge engine" for agents. It compiles a corpus ahead of
 
 Background research, Pinecone's real numbers and the build plan are in [RESEARCH_AND_PLAN.md](RESEARCH_AND_PLAN.md).
 
+**Also here: [`nexus_agent/`](nexus_agent/README.md), a general agent harness** built on the same parts. Pick any LLM, attach tools (files, shell, web, your databases, REST APIs, MCP servers, your own Python functions, and nexus-lite knowledge compiled from your docs), and give it tasks. It ships with a CLI (`nxa`), a Python SDK, an HTTP API with remote tool approval, sessions, permissions, skills, and an eval runner. A working example is in [`examples/shop-ops/`](examples/shop-ops/).
+
 ## How it works
 
 ```
@@ -107,7 +109,7 @@ The grader version moves the baseline by up to 13 points. Always compare runs th
 ## Status
 
 - Done: engine, compile, query, HTTP API, tau2 integration (3 configs), packs, usage logging, scorecard, offline regrade, and tests (`pytest tests/test_domains/test_banking_knowledge/test_retrieval_e2e.py`).
-- Not done yet: full agent runs (they need an LLM budget or a local model), and the coding-agent Context Compiler loop (Phase 3).
+- Not done yet: full benchmark runs (they need an LLM budget; the Gemini free tier allows 20 requests/day on gemini-3-flash), and the coding-agent Context Compiler loop (Phase 3).
 
 ## Credits
 
