@@ -24,6 +24,31 @@ pip install -e ./nexus_lite -e "./nexus_agent[mcp]"     # add [sql] for Postgres
 
 Put API keys in `.env` (for example `GEMINI_API_KEY=...`, `OPENAI_API_KEY=...`, `ANTHROPIC_API_KEY=...`, `OPENROUTER_API_KEY=...`). For free local models, run [Ollama](https://ollama.com) and use `ollama_chat/<model>`.
 
+## Connect a dataset in one command
+
+```bash
+nxa connect ./my_csvs --name sales                                  # CSV/TSV/XLSX/Parquet/JSON files -> SQLite
+nxa connect shop.db --name shop                                     # existing SQLite file, used in place (read-only)
+nxa connect postgresql://user@host/db --name crm                    # any SQLAlchemy URL (pip install sqlalchemy + driver)
+nxa connect ./csvs --name hc --dictionary columns.csv               # merge your data dictionary
+nxa connect ./csvs --name hc --describe-model gemini/gemini-3.1-flash-lite   # LLM notes for undocumented columns
+nxa serve -c sales/agent.yaml                                       # then ask questions in the web UI
+```
+
+What it does:
+
+| Step | Output |
+|---|---|
+| 1. load | Files are loaded into `data/<name>.db` (chunked, typed). Databases are attached as-is and never modified. |
+| 2. profile | Per table: row count. Per column: type, % missing, distinct values, range, top values, likely placeholders (e.g. `365243`). |
+| 3. relations | Join keys found from column names, uniqueness and value overlap. Each is labeled one-to-many or one-to-one (sibling tables that share a parent key are skipped). Join columns are indexed in databases it created. |
+| 4. docs | `docs/table_<t>.md` per table, plus `docs/guide_overview.md` (join map, aggregation rule, data quirks). Descriptions come from your dictionary and/or an LLM (marked unverified). |
+| 5. knowledge | The docs are compiled into a nexus-lite knowledge base. |
+| 6. project | `agent.yaml` (read-only SQL, knowledge, persistent Python, files, memory), `tools/analysis.py`, `skills/<name>-analysis/SKILL.md`. |
+| 7. self-check | Join, column-meaning and row-count questions are asked of the knowledge base; misses are printed. |
+
+Review the generated docs before relying on them: they are what the agent believes about your data.
+
 ## Use it
 
 ### CLI

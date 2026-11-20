@@ -501,3 +501,39 @@ def test_key_pool_rotation_and_failover(monkeypatch):
     assert stats[0]["rate_limited"] == 1 and stats[0]["cooling_s"] > 20
     assert all("k1" not in str(s) for s in stats)    # keys never exposed
     llm_mod.KeyPool._pools.clear()
+
+
+def test_connect_csv_folder(tmp_path):
+    from nexus_agent.config import build_agent, load_config
+    from nexus_agent.connect import connect
+
+    src = tmp_path / "raw"
+    src.mkdir()
+    (src / "customers.csv").write_text("id,name,tier\n1,Alice,gold\n2,Bob,standard\n3,Chen,gold\n", encoding="utf-8")
+    (src / "orders.csv").write_text("order_id,customer_id,total,days_late\n10,1,100,0\n11,1,50,365243\n12,2,20,3\n"
+                                    "13,3,70,365243\n14,3,30,1\n" + "".join(f"{20 + i},2,5,{i % 4}\n" for i in range(60)),
+                                    encoding="utf-8")
+    (src / "dict.csv").write_text('table,column,description\ncustomers,tier,"Loyalty tier, gold or standard"\n',
+                                  encoding="utf-8")
+    out = tmp_path / "proj"
+    s = connect(str(src), "shop", out=str(out), dictionary=str(src / "dict.csv"), embedder="none",
+                log=lambda m: None)
+    assert s["tables"] == {"customers": 3, "orders": 65}
+    rel = s["relations"][0]
+    assert (rel["parent"], rel["parent_col"], rel["child"], rel["child_col"], rel["kind"]) == \
+        ("customers", "id", "orders", "customer_id", "one-to-many")
+    assert s["self_check"]["passed"] == s["self_check"]["checks"]
+    guide = (out / "docs" / "guide_overview.md").read_text(encoding="utf-8")
+    assert "`orders.customer_id` -> `customers.id`" in guide
+    assert "Loyalty tier, gold or standard" in (out / "docs" / "table_customers.md").read_text(encoding="utf-8")
+    cfg = load_config(out / "agent.yaml")
+    agent = build_agent(cfg)
+    names = {t.name for t in agent.tools}
+    assert {"db_query", "kb_query", "run_python", "read_file"} <= names
+    runp = next(t for t in agent.tools if t.name == "run_python")
+    try:
+        assert "65" in runp(code="q('SELECT COUNT(*) AS n FROM orders').n[0]")
+        assert "readonly" in runp(code="conn.execute('DELETE FROM orders')").lower()
+    finally:
+        for ts in list(agent.toolsets):
+            agent.detach(ts)

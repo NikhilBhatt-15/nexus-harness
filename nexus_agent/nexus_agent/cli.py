@@ -173,6 +173,14 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8787)
     s.add_argument("-c", "--config")
+    cn = sub.add_parser("connect", help="turn a dataset folder, file or database into a ready agent project")
+    cn.add_argument("source", help="folder/file of CSV, TSV, XLSX, Parquet, JSON; a .db/.sqlite file; or a DB URL")
+    cn.add_argument("--name", required=True, help="project / knowledge-base name")
+    cn.add_argument("--out", help="project folder (default ./NAME)")
+    cn.add_argument("--dictionary", help="data dictionary CSV/TSV (column + description [+ table])")
+    cn.add_argument("--describe-model", help="LLM that writes descriptions for undocumented columns")
+    cn.add_argument("--kb-root", help="where to store the compiled knowledge base (default PROJECT/.nxa/contexts)")
+    cn.add_argument("--embedder", help="ollama:<model> | litellm:<model> | none (default ollama:embeddinggemma-2)")
     e = sub.add_parser("eval", help="run a task suite")
     e.add_argument("suite")
     e.add_argument("-m", "--model", action="append", help="repeatable: compare several models")
@@ -200,6 +208,11 @@ def main(argv: list[str] | None = None) -> None:
         from nexus_agent.server import serve
 
         serve(a.config, a.host, a.port)
+    elif a.cmd == "connect":
+        from nexus_agent.connect import connect
+
+        connect(a.source, a.name, out=a.out, dictionary=a.dictionary, describe_model=a.describe_model,
+                kb_root=a.kb_root, embedder=a.embedder)
     elif a.cmd == "eval":
         from nexus_agent.evals import main as eval_main
 
