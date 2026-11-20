@@ -584,10 +584,15 @@ def mcp(name: str, *, command: str | None = None, args: list[str] | None = None,
 
 
 def python_session(workdir: str | Path = ".", *, prelude: str = "", name: str = "python",
-                   description: str = "", python: str | None = None, timeout_s: int = 300) -> Toolset:
+                   description: str = "", python: str | None = None, timeout_s: int = 300,
+                   auto_approve_readonly: bool = False) -> Toolset:
     """Persistent Python (code-interpreter style): variables, imports and loaded data survive between calls.
-    ``prelude`` runs once when the session starts (imports, connections, helper functions)."""
-    from nexus_agent.python_session import PythonSession
+    ``prelude`` runs once when the session starts (imports, connections, helper functions).
+
+    ``auto_approve_readonly``: calls whose code only computes and prints (a static check: no file, process,
+    network or database writes, no new connections, no dynamic code) are treated as risk ``read`` and run
+    without approval; everything else stays ``exec`` and asks. It is a guard, not a sandbox."""
+    from nexus_agent.python_session import PythonSession, classify_code
 
     sess = PythonSession(workdir, prelude=prelude, python=python)
     extra = f" {description}" if description else ""
@@ -605,6 +610,10 @@ def python_session(workdir: str | Path = ".", *, prelude: str = "", name: str = 
         return sess.run(code, timeout)
 
     run_python.description += extra
+    if auto_approve_readonly:
+        run_python.risk_fn = lambda args: classify_code(args.get("code", ""))
+        run_python.description += (" Pure analysis (query, compute, print) runs immediately; writing files, "
+                                    "imports like os/subprocess, or new connections need the user's approval.")
 
     @tool(name="python_vars")
     def python_vars() -> str:

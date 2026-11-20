@@ -365,8 +365,9 @@ class Agent:
 
     def _execute(self, call) -> Iterator[dict]:
         t = next((x for x in self.tools if x.name == call.name), None)
+        risk, reasons = t.risk_for(call.arguments) if t else (None, [])
         yield self._emit({"type": "tool_call", "id": call.id, "name": call.name, "arguments": call.arguments,
-                          "toolset": t.toolset if t else None})
+                          "toolset": t.toolset if t else None, "risk": risk, "risk_reasons": reasons})
         if t is None:
             out, ok = f"Error: unknown tool '{call.name}'. Available: {', '.join(x.name for x in self.tools)}", False
         else:

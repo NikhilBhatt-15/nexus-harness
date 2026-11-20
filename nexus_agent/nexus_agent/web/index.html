@@ -136,7 +136,7 @@ function render(ev,runId){
 async function pollApproval(runId){
   while(busy){
     try{const r=await api(`/v1/runs/${runId}`); if(r.pending_approval&&!document.querySelector(`[data-run="${runId}"]`)){
-      const p=r.pending_approval; const d=add(`<div data-run="${runId}"><b>Approve ${esc(p.tool)}?</b> <span class="note">risk: ${esc(p.risk)}</span><pre>${esc(JSON.stringify(p.arguments,null,1))}</pre><button class="yes">Allow</button><button class="no">Deny</button></div>`,'approve');
+      const p=r.pending_approval; const d=add(`<div data-run="${runId}"><b>Approve ${esc(p.tool)}?</b> <span class="note">risk: ${esc(p.risk)}${p.reasons?.length?' · '+esc(p.reasons.join('; ')):''}</span><pre>${esc(JSON.stringify(p.arguments,null,1))}</pre><button class="yes">Allow</button><button class="no">Deny</button></div>`,'approve');
       const answer=async allow=>{d.querySelectorAll('button').forEach(b=>b.disabled=true);d.querySelector('b').textContent=allow?'Allowed':'Denied';await api(`/v1/runs/${runId}/approve`,{method:'POST',body:JSON.stringify({allow})});d.querySelector('[data-run]')?.removeAttribute('data-run')};
       d.querySelector('.yes').onclick=()=>answer(true); d.querySelector('.no').onclick=()=>answer(false);
     }}catch(e){}

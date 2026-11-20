@@ -25,6 +25,48 @@ from pathlib import Path
 
 SENTINEL = "\x00NXA_RESULT "
 
+# ---------------------------------------------------------------------------
+# Read-only classification (a static guard, not a sandbox)
+# ---------------------------------------------------------------------------
+
+import ast as _ast
+
+_BLOCKED_MODULES = {"os", "sys", "subprocess", "shutil", "socket", "requests", "urllib", "http", "httpx",
+                    "ftplib", "smtplib", "ctypes", "multiprocessing", "threading", "signal", "importlib",
+                    "pickle", "shelve", "tempfile", "glob", "pathlib", "builtins", "webbrowser", "asyncio"}
+_BLOCKED_CALLS = {"eval", "exec", "compile", "__import__", "open", "input", "breakpoint", "globals", "setattr",
+                  "delattr", "getattr"}
+_WRITE_METHODS = {"to_csv", "to_excel", "to_parquet", "to_sql", "to_json", "to_pickle", "to_feather", "to_hdf",
+                  "to_html", "to_markdown", "to_stata", "to_orc", "write", "write_text", "write_bytes", "writelines",
+                  "unlink", "rmdir", "rmtree", "mkdir", "makedirs", "rename", "touch", "chmod",
+                  "savefig", "save", "save_model", "dump", "connect", "execute", "executescript", "executemany",
+                  "commit", "system", "popen", "spawn", "kill"}
+
+
+def classify_code(code: str) -> tuple[str, list[str]]:
+    """Return ("read", []) when the code only computes and prints (no file/process/network/DB writes,
+    no new connections, no dynamic code), else ("exec", reasons). Conservative: anything unusual -> exec."""
+    try:
+        tree = _ast.parse(code)
+    except SyntaxError as e:
+        return "read", [f"syntax error ({e.msg}); it will fail harmlessly"]
+    reasons: list[str] = []
+    for node in _ast.walk(tree):
+        if isinstance(node, (_ast.Import, _ast.ImportFrom)):
+            mods = [a.name for a in node.names] if isinstance(node, _ast.Import) else [node.module or ""]
+            for m in mods:
+                if m.split(".")[0] in _BLOCKED_MODULES:
+                    reasons.append(f"imports {m}")
+        elif isinstance(node, _ast.Call):
+            f = node.func
+            if isinstance(f, _ast.Name) and f.id in _BLOCKED_CALLS:
+                reasons.append(f"calls {f.id}()")
+            elif isinstance(f, _ast.Attribute) and f.attr in _WRITE_METHODS:
+                reasons.append(f"calls .{f.attr}()")
+        elif isinstance(node, _ast.Attribute) and node.attr.startswith("__") and node.attr.endswith("__"):
+            reasons.append(f"uses dunder attribute {node.attr}")
+    return ("exec", sorted(set(reasons))) if reasons else ("read", [])
+
 WORKER = r'''
 import ast, io, json, sys, traceback, contextlib
 SENTINEL = "\x00NXA_RESULT "

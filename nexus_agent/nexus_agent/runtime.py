@@ -37,12 +37,14 @@ class Permissions:
         if t.name in self.allow or t.toolset in self.allow:
             return True, ""
         limit = _AUTO_LIMIT[self.mode]
-        if RISK_ORDER[t.risk] <= RISK_ORDER[limit]:
+        risk, reasons = t.risk_for(args)
+        if RISK_ORDER[risk] <= RISK_ORDER[limit]:
             return True, ""
+        why = f" ({'; '.join(reasons)})" if reasons else ""
         if self.mode == "readonly":
-            return False, f"read-only mode: '{t.name}' ({t.risk}) is not allowed"
+            return False, f"read-only mode: '{t.name}' ({risk}{why}) is not allowed"
         if self.approver is None:
-            return False, f"'{t.name}' ({t.risk}) needs approval and no approver is available"
+            return False, f"'{t.name}' ({risk}{why}) needs approval and no approver is available"
         return (True, "") if self.approver(t, args) else (False, f"user declined '{t.name}'")
 
 

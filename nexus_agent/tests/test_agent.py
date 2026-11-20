@@ -419,3 +419,46 @@ def test_per_tool_offload_settings(tmp_path):
     assert out["kbish"] == big                                   # not offloaded
     assert "Full output saved as `dumpish-" in out["dumpish"]    # offloaded, short hashed id
     assert len(re.search(r"saved as `([^`]+)`", out["dumpish"]).group(1)) <= 50
+
+
+def test_readonly_python_classification_and_auto_approval(tmp_path):
+    from nexus_agent.python_session import classify_code
+
+    readonly = [
+        "print(q('SELECT NAME_EDUCATION_TYPE, COUNT(*), AVG(TARGET) FROM application_train GROUP BY 1'))",
+        "df = q('SELECT TARGET, EXT_SOURCE_3 FROM application_train')\ndf['d'] = pd.qcut(df.EXT_SOURCE_3, 10, labels=False)\n"
+        "df.groupby('d').TARGET.agg(['mean','count'])",
+        "import lightgbm as lgb\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import roc_auc_score\n"
+        "m = lgb.LGBMClassifier().fit(X, y)\nroc_auc_score(yv, m.predict_proba(Xv)[:, 1])",
+        "s = df.name.str.replace('a', 'b')\nlst.remove(3)",
+    ]
+    for code in readonly:
+        assert classify_code(code) == ("read", []), code
+    risky = {
+        "conn2 = sqlite3.connect('..\\home_credit.db')": ".connect()",
+        "df.to_csv('out.csv')": ".to_csv()",
+        "import os\nos.listdir('.')": "imports os",
+        "open('x.txt', 'w').write('hi')": "calls open()",
+        "import subprocess": "imports subprocess",
+        "eval('1+1')": "calls eval()",
+        "x.__class__.__bases__": "dunder",
+        "conn.execute('DELETE FROM t')": ".execute()",
+    }
+    for code, why in risky.items():
+        risk, reasons = classify_code(code)
+        assert risk == "exec" and any(why in r for r in reasons), (code, reasons)
+
+    ts = toolsets.python_session(tmp_path, auto_approve_readonly=True)
+    asked = []
+    try:
+        agent = Agent(FakeLLM([Completion(tool_calls=[call("run_python", code="1 + 1"),
+                                                      call("run_python", code="open('f.txt','w').write('x')")]),
+                               Completion(text="done")]),
+                      [ts], permissions="auto", approver=lambda t, a: asked.append(a["code"]) or False, workdir=tmp_path)
+        agent.run("go")
+        results = [m["content"] for m in agent.messages if m["role"] == "tool"]
+        assert results[0].endswith("2")                       # pure computation ran without asking
+        assert "declined" in results[1] and asked == ["open('f.txt','w').write('x')"]
+        assert not (tmp_path / "f.txt").exists()
+    finally:
+        ts.teardown()

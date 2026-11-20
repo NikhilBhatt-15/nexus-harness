@@ -42,7 +42,8 @@ def create_app(config_path: str | None = None) -> FastAPI:
     def approver_for(run: dict):
         def approve(t, args) -> bool:
             ev = threading.Event()
-            run["pending_approval"] = {"tool": t.name, "risk": t.risk, "arguments": args, "_ev": ev}
+            risk, reasons = t.risk_for(args)
+            run["pending_approval"] = {"tool": t.name, "risk": risk, "reasons": reasons, "arguments": args, "_ev": ev}
             ok = ev.wait(timeout=float(os.environ.get("NXA_APPROVAL_TIMEOUT", "300")))
             decision = bool(ok and run["pending_approval"].get("allow"))
             run["pending_approval"] = None

@@ -63,6 +63,17 @@ class Tool:
     offload: bool = True
     offload_at: int | None = None
     max_output: int | None = None
+    # Optional per-call risk: fn(arguments) -> (risk, reasons). Lets a tool run unattended when a specific
+    # call is harmless (e.g. read-only Python) and ask for approval otherwise.
+    risk_fn: Callable[[dict], tuple[Risk, list[str]]] | None = None
+
+    def risk_for(self, args: dict) -> tuple[Risk, list[str]]:
+        if self.risk_fn is None:
+            return self.risk, []
+        try:
+            return self.risk_fn(args)
+        except Exception as e:  # never let a classifier error lower the risk
+            return self.risk, [f"risk check failed: {e}"]
 
     def schema(self) -> dict:
         return {"type": "function",
