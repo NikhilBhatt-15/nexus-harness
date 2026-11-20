@@ -268,7 +268,10 @@ def test_http_server_runs_and_approval(monkeypatch, tmp_path):
         return Agent(llm, [toolsets.files(tmp_path)], permissions="ask", session=kw.get("session"), workdir=tmp_path)
 
     monkeypatch.setattr(srv, "build_agent", fake_build)
-    c = TestClient(srv.create_app(None))
+    cfg = tmp_path / "proj" / "agent.yaml"
+    cfg.parent.mkdir()
+    cfg.write_text("model: fake\n", encoding="utf-8")
+    c = TestClient(srv.create_app(str(cfg)))
     run = c.post("/v1/runs", json={"task": "write"}).json()
     import time
 
@@ -385,7 +388,7 @@ def test_web_ui_and_info_endpoints(tmp_path):
     c = TestClient(srv.create_app(str(cfg)))
     assert "nexus-agent" in c.get("/").text
     info = c.get("/v1/info").json()
-    assert info["model"] == "fake" and info["mode"] == "ask" and info["toolsets"][0].startswith("web:")
+    assert info["model"] == "fake" and info["mode"] == "ask" and info["toolsets"][0]["name"] == "web"
     s = Session()
     s.add_message({"role": "user", "content": "hello there"})
     assert c.get(f"/v1/sessions/{s.id}/messages").json()[0]["content"] == "hello there"

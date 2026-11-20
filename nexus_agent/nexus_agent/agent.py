@@ -99,6 +99,7 @@ class Agent:
         self.clear_tool_results_at = clear_tool_results_at
         self.keep_tool_results = keep_tool_results
         self.todos: list[dict] = []
+        self.cancel_requested = False  # set from another thread to stop after the current step
         self.compact_at = compact_at
         self.keep_recent = keep_recent
         self.on_event = on_event
@@ -331,6 +332,9 @@ class Agent:
         cost0 = self.llm.total_cost
         try:
             while steps < self.max_steps:
+                if self.cancel_requested:
+                    stop = "interrupted"
+                    break
                 steps += 1
                 for ev in (self._clear_old_tool_results(), self._maybe_compact()):
                     if ev:
@@ -346,6 +350,10 @@ class Agent:
                     final_text, stop = comp.text, "done"
                     break
                 for call in comp.tool_calls:
+                    if self.cancel_requested:
+                        self._add({"role": "tool", "tool_call_id": call.id, "name": call.name,
+                                   "content": "Cancelled by the user before this tool ran."})
+                        continue
                     n_calls += 1
                     yield from self._execute(call)
                 if self.max_cost_usd is not None and self.llm.total_cost - cost0 > self.max_cost_usd:

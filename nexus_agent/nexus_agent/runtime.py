@@ -102,7 +102,9 @@ class Session:
             first = recs[0] if recs else {}
             msgs = [r["message"] for r in recs if r.get("type") == "message"]
             title = first.get("title") or next((m["content"][:70] for m in msgs if m.get("role") == "user"), None)
-            out.append({"id": p.stem, "messages": len(msgs), "model": first.get("model"), "title": title})
+            out.append({"id": p.stem, "messages": len(msgs), "model": first.get("model"), "title": title,
+                        "project": first.get("project"), "workdir": first.get("workdir"),
+                        "updated": p.stat().st_mtime})
         return out
 
 
