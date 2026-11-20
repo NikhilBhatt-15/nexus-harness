@@ -67,6 +67,8 @@ def toolset_from_entry(kind: str, opts: dict | None, base: str | Path | None = N
         return T.mcp(opts.pop("name"), **opts)
     if kind == "python":
         return T.python_tools(opts.pop("path"), opts.pop("name", None))
+    if kind == "python_session":
+        return T.python_session(opts.pop("root", "."), **opts)
     if kind == "memory":
         return T.memory(opts.pop("path", ".nxa/memory.json"))
     raise ValueError(f"unknown toolset kind {kind!r}")

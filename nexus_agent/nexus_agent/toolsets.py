@@ -304,7 +304,7 @@ def sql(url: str, *, name: str = "db", read_only: bool = False, row_limit: int =
     """Any SQL database. ``url``: a sqlite file path, ``sqlite:///path``, or a SQLAlchemy URL."""
     db = _DB(url, read_only=read_only)
 
-    @tool(name=f"{name}_schema")
+    @tool(name=f"{name}_schema", offload=False, max_output=30_000)
     def db_schema() -> str:
         """Show the database tables, columns and row counts."""
         return db.schema()
@@ -419,7 +419,8 @@ def http_api(base_url: str, *, name: str = "api", headers_from_env: dict[str, st
 
 
 def knowledge(slug: str, *, root: str = "contexts", source: str | None = None, model: str | None = None,
-              name: str = "kb") -> Toolset:
+              name: str = "kb", max_chars: int = 8000, target_tokens: int = 768,
+              overlap_tokens: int = 128) -> Toolset:
     """Compiled knowledge over a docs folder. If ``source`` is given and the context does not exist yet,
     it is compiled on attach (``nexus-lite build``)."""
     from nexus_lite.query import Engine
@@ -431,7 +432,8 @@ def knowledge(slug: str, *, root: str = "contexts", source: str | None = None, m
             from nexus_lite.context import compile_context
             from nexus_lite.corpus import load_corpus
 
-            compile_context(root, slug, load_corpus(source), log=lambda *_: None)
+            compile_context(root, slug, load_corpus(source), log=lambda *_: None, target_tokens=target_tokens,
+                            overlap_tokens=overlap_tokens)
         state["engine"] = Engine(root, default_model=model)
 
     def engine() -> Engine:
@@ -439,7 +441,7 @@ def knowledge(slug: str, *, root: str = "contexts", source: str | None = None, m
             setup()
         return state["engine"]
 
-    @tool(name=f"{name}_query")
+    @tool(name=f"{name}_query", offload=False)
     def kb_query(question: str, depth: Literal["quick", "standard", "deep"] = "standard") -> str:
         """Ask the knowledge base. Returns compiled, cited knowledge: fact sheets, comparison rosters,
         procedures with exact tool names, and relevant passages. Ask one specific question per call.
@@ -448,7 +450,8 @@ def knowledge(slug: str, *, root: str = "contexts", source: str | None = None, m
             question: A specific, self-contained question.
             depth: How much to retrieve.
         """
-        r = engine().query({"scope": [slug], "ask": question, "budget": {"depth": depth}})
+        r = engine().query({"scope": [slug], "ask": question,
+                            "budget": {"depth": depth, "max_chars": max_chars}})
         if r.get("status") != "completed":
             return f"Knowledge query failed: {r.get('error')}"
         text = r["output"][0]["content"][0]["text"]
@@ -580,12 +583,57 @@ def mcp(name: str, *, command: str | None = None, args: list[str] | None = None,
 # ---------------------------------------------------------------------------
 
 
+def python_session(workdir: str | Path = ".", *, prelude: str = "", name: str = "python",
+                   description: str = "", python: str | None = None, timeout_s: int = 300) -> Toolset:
+    """Persistent Python (code-interpreter style): variables, imports and loaded data survive between calls.
+    ``prelude`` runs once when the session starts (imports, connections, helper functions)."""
+    from nexus_agent.python_session import PythonSession
+
+    sess = PythonSession(workdir, prelude=prelude, python=python)
+    extra = f" {description}" if description else ""
+
+    @tool(name="run_python", risk="exec", offload_at=12_000)
+    def run_python(code: str, timeout: int = timeout_s) -> str:
+        """Run Python in a persistent session (like a Jupyter notebook): variables, imports and DataFrames from
+        earlier calls are still available, so load data once and reuse it. If the last line is an expression its
+        value is shown (no print needed). Errors return a traceback and keep the session alive.
+
+        Args:
+            code: Python code to run.
+            timeout: Seconds before the call is stopped (the session restarts and variables are lost).
+        """
+        return sess.run(code, timeout)
+
+    run_python.description += extra
+
+    @tool(name="python_vars")
+    def python_vars() -> str:
+        """List variables currently defined in the Python session (with DataFrame shapes)."""
+        return sess.variables()
+
+    @tool(name="reset_python", risk="exec")
+    def reset_python() -> str:
+        """Restart the Python session, clearing all variables."""
+        return sess.reset()
+
+    return Toolset(name, [run_python, python_vars, reset_python], teardown=sess.close,
+                   prompt=f"Python session (persistent state, working dir {sess.workdir}). Load data once into "
+                          f"variables and reuse them across calls; use python_vars to see what exists.{extra}",
+                   meta={"session": sess})
+
+
 def python_tools(path: str | Path, name: str | None = None) -> Toolset:
-    """Load every ``@tool`` (or ``Tool``) defined at module level in a Python file."""
+    """Load a plugin file: a module-level ``Toolset`` (returned as-is) or every ``@tool`` defined at module level."""
     path = Path(path).resolve()
     spec = importlib.util.spec_from_file_location(f"nxa_plugin_{path.stem}", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    sets = [v for v in vars(mod).values() if isinstance(v, Toolset)]
+    if sets:
+        ts = sets[0]
+        if name:
+            ts.name = name
+        return ts
     found = [v for v in vars(mod).values() if isinstance(v, Tool)]
     prompt = (mod.__doc__ or "").strip()
     return Toolset(name or path.stem, found, prompt=prompt)
@@ -642,5 +690,5 @@ def subagent(model: str, toolsets: list[Toolset], *, name: str = "delegate", des
     return Toolset(f"subagent:{name}", [t])
 
 
-REGISTRY = {"files": files, "shell": shell, "web": web, "sqlite": sqlite, "sql": sql, "http_api": http_api,
+REGISTRY = {"python_session": python_session, "files": files, "shell": shell, "web": web, "sqlite": sqlite, "sql": sql, "http_api": http_api,
             "knowledge": knowledge, "mcp": mcp, "python": python_tools, "memory": memory}

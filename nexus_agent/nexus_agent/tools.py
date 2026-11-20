@@ -58,6 +58,11 @@ class Tool:
     fn: Callable[..., Any]
     risk: Risk = "read"
     toolset: str = ""
+    # Output handling: offload=False keeps the whole result in context (up to max_output chars);
+    # offload_at overrides the agent's offload threshold for this tool.
+    offload: bool = True
+    offload_at: int | None = None
+    max_output: int | None = None
 
     def schema(self) -> dict:
         return {"type": "function",
@@ -68,7 +73,8 @@ class Tool:
 
 
 def tool(fn: Callable | None = None, *, name: str | None = None, risk: Risk = "read",
-         description: str | None = None) -> Any:
+         description: str | None = None, offload: bool = True, offload_at: int | None = None,
+         max_output: int | None = None) -> Any:
     """Decorator: turn a typed, documented function into a ``Tool``.
 
     Usage: ``@tool`` or ``@tool(risk="write", name="save_note")``.
@@ -93,7 +99,8 @@ def tool(fn: Callable | None = None, *, name: str | None = None, risk: Risk = "r
             props[pname] = spec
         desc = description or "\n\n".join(x for x in (doc.short_description, doc.long_description) if x)
         return Tool(name=name or f.__name__, description=desc or f.__name__,
-                    parameters={"type": "object", "properties": props, "required": required}, fn=f, risk=risk)
+                    parameters={"type": "object", "properties": props, "required": required}, fn=f, risk=risk,
+                    offload=offload, offload_at=offload_at, max_output=max_output)
 
     return wrap(fn) if fn is not None else wrap
 

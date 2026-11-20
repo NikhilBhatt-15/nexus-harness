@@ -27,6 +27,7 @@ their results, then you report back.
 
 How to work:
 - Understand the goal, then act. Prefer doing over describing. Use tools to look things up instead of guessing.
+- Only call tools when the task needs them: answer greetings and simple conversation directly.
 - Break big tasks into steps. After each tool result, decide the next step.
 - Verify your work when you can (re-read files you wrote, re-run queries, run tests).
 - If a tool fails, read the error and try a different approach; do not repeat the same failing call.
@@ -223,12 +224,15 @@ class Agent:
 
         return Toolset("context", [read_tool_output, grep_tool_output, update_plan])
 
-    def _offload(self, call_id: str, name: str, out: str) -> str:
+    def _offload(self, call_id: str, name: str, out: str, limit: int | None = None) -> str:
         """Large tool outputs go to disk; the model sees a preview plus a handle (context offloading)."""
-        if len(out) <= self.offload_chars:
+        if len(out) <= (limit or self.offload_chars):
             return out
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
-        oid = re.sub(r"[^\w.-]", "_", f"{name}-{call_id}")[:80]
+        import hashlib
+
+        safe = re.sub(r"[^\w.-]", "_", name)[:40]
+        oid = f"{safe}-{hashlib.sha1(call_id.encode()).hexdigest()[:8]}"
         (self.artifacts_dir / f"{oid}.txt").write_text(out, encoding="utf-8")
         head = out[: self.preview_chars]
         return (f"{head}\n\n[Full output saved as `{oid}`: {len(out)} chars, {out.count(chr(10)) + 1} lines. "
@@ -379,9 +383,9 @@ class Agent:
                 except Exception as e:
                     out, ok = f"Error: {type(e).__name__}: {e}", False
                 full_chars = len(out)
-                if ok:
-                    out = self._offload(call.id, call.name, out)
-                out = truncate(out, self.max_tool_chars)
+                if ok and t.offload:
+                    out = self._offload(call.id, call.name, out, t.offload_at)
+                out = truncate(out, t.max_output or self.max_tool_chars)
                 yield self._emit({"type": "tool_result", "id": call.id, "name": call.name, "ok": ok,
                                   "chars": full_chars, "offloaded": full_chars > len(out),
                                   "ms": int((time.time() - t0) * 1000), "preview": out[:1500]})

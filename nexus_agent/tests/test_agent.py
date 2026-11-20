@@ -390,3 +390,32 @@ def test_web_ui_and_info_endpoints(tmp_path):
     s.add_message({"role": "user", "content": "hello there"})
     assert c.get(f"/v1/sessions/{s.id}/messages").json()[0]["content"] == "hello there"
     assert any(x["title"] == "hello there" for x in c.get("/v1/sessions").json())
+
+
+def test_python_session_persists_state(tmp_path):
+    ts = toolsets.python_session(tmp_path, prelude="import math\nBASE = 10")
+    t = {x.name: x for x in ts.tools}
+    try:
+        assert "started a new Python session" in t["run_python"](code="x = BASE * 2")
+        assert t["run_python"](code="x + 1").strip() == "21"            # state kept, expression displayed
+        err = t["run_python"](code="undefined_name")
+        assert "NameError" in err and "variables kept" in err and '"<string>"' not in err
+        assert t["run_python"](code="print(x)").strip() == "20"         # still alive after the error
+        assert "x: int" in t["python_vars"]()
+        assert "timed out" in t["run_python"](code="import time; time.sleep(3)", timeout=1)
+        assert t["run_python"](code="'x' in globals()").endswith("False")
+        t["reset_python"]()
+    finally:
+        ts.teardown()
+
+
+def test_per_tool_offload_settings(tmp_path):
+    big = "y" * 9000
+    calls = [Completion(tool_calls=[call("kbish"), call("dumpish")]), Completion(text="ok")]
+    agent = Agent(FakeLLM(calls), [tool(lambda: big, name="kbish", offload=False),
+                                   tool(lambda: big, name="dumpish")], workdir=tmp_path, offload_chars=1000)
+    agent.run("go")
+    out = {m["name"]: m["content"] for m in agent.messages if m["role"] == "tool"}
+    assert out["kbish"] == big                                   # not offloaded
+    assert "Full output saved as `dumpish-" in out["dumpish"]    # offloaded, short hashed id
+    assert len(re.search(r"saved as `([^`]+)`", out["dumpish"]).group(1)) <= 50
