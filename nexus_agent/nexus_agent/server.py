@@ -156,8 +156,11 @@ def create_app(config_path: str | None = None) -> FastAPI:
         from nexus_agent.runtime import load_skills
 
         skills = [s.name for s in load_skills([Path(cfg.get('_dir', '.')) / d for d in cfg.get('skills_dirs') or []])]
+        from nexus_agent.llm import KeyPool
+
+        pool = KeyPool.for_model(cfg.get("model") or "")
         return {"model": cfg.get("model"), "mode": cfg.get("permissions", "auto"), "toolsets": sets,
-                "skills": skills}
+                "skills": skills, "keys": pool.stats() if pool else None}
 
     @app.get("/", include_in_schema=False)
     def index():

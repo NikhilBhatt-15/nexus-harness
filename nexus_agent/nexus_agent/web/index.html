@@ -88,6 +88,7 @@ async function loadInfo(){
   try{const i=await api('/v1/info');
     $('#info').innerHTML=`<div class="kv"><b>Model</b> ${esc(i.model)}</div><div class="kv"><b>Permissions</b> ${esc(i.mode)}</div>`+
       (i.skills?.length?`<div class="kv"><b>Skills</b> ${esc(i.skills.join(', '))}</div>`:'')+
+      (i.keys?`<div class="kv"><b>API keys</b> ${i.keys.length} rotating · `+i.keys.map(k=>`${k.key}: ${k.uses}${k.cooling_s?` (cooling ${k.cooling_s}s)`:''}`).join(', ')+'</div>':'')+
       '<h2>Toolsets</h2>'+i.toolsets.map(t=>{const [n,...r]=t.split(': ');return `<div class="ts"><div class="n">${esc(n)}</div><div class="t">${esc(r.join(': '))}</div></div>`}).join('');
   }catch(e){$('#info').textContent='info unavailable: '+e.message}
   loadSessions();

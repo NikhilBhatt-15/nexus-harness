@@ -1,0 +1,800 @@
+[
+ {
+  "id": "q001",
+  "type": "single",
+  "question": "What is the maximum transaction approval limit for a user with Finance access?",
+  "answer": "A user with Finance access can approve transactions without additional authorization up to $50,000.",
+  "key_facts": [
+   "$50,000"
+  ],
+  "gold_docs": [
+   "doc_business_savings_accounts_joint_business_holders_+_user_roles_002"
+  ]
+ },
+ {
+  "id": "q002",
+  "type": "single",
+  "question": "What is the late fee amount for the Business Bronze Rewards Card if a customer fails to pay at least the minimum due by the statement due date?",
+  "answer": "If you do not pay at least the minimum due by the statement due date, a late fee of $32.50 may be assessed.",
+  "key_facts": [
+   "$32.50"
+  ],
+  "gold_docs": [
+   "doc_business_credit_cards_business_bronze_rewards_card_007"
+  ]
+ },
+ {
+  "id": "q003",
+  "type": "single",
+  "question": "What is the daily ATM withdrawal limit for the Blue Account debit card?",
+  "answer": "The Blue Account debit card has a daily ATM withdrawal limit of $500, which applies to all domestic and international withdrawals combined within a 24-hour period.",
+  "key_facts": [
+   "$500"
+  ],
+  "gold_docs": [
+   "doc_checking_accounts_blue_account_012"
+  ]
+ },
+ {
+  "id": "q004",
+  "type": "single",
+  "question": "What is the standard APR for the Silver Rewards Card once the one-year promotional period expires?",
+  "answer": "After the promotional period ends, the standard APR for the Silver Rewards Card is 18.99%.",
+  "key_facts": [
+   "18.99%"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_silver_rewards_card_009"
+  ]
+ },
+ {
+  "id": "q005",
+  "type": "single",
+  "question": "What is the annual percentage yield (APY) for the Hunter Green account?",
+  "answer": "The Hunter Green account earns an APY of 1.0% on eligible balances.",
+  "key_facts": [
+   "1.0%"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_hunter_green_006"
+  ]
+ },
+ {
+  "id": "q006",
+  "type": "single",
+  "question": "What is the overdraft fee per occurrence for the Navy Blue Account?",
+  "answer": "The overdraft fee per occurrence for the Navy Blue Account is $0.00.",
+  "key_facts": [
+   "$0.00"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_navy_blue_002"
+  ]
+ },
+ {
+  "id": "q007",
+  "type": "single",
+  "question": "What is the maximum daily limit for external transfers made through a Platinum Account?",
+  "answer": "The maximum total amount you can transfer out per day using a Platinum Account is $100,000.",
+  "key_facts": [
+   "$100,000"
+  ],
+  "gold_docs": [
+   "doc_savings_accounts_platinum_account_009"
+  ]
+ },
+ {
+  "id": "q008",
+  "type": "single",
+  "question": "What is the markup percentage applied to currency conversions at Rho-Bank?",
+  "answer": "Currency conversions are priced at the interbank rate plus a markup of 0.5%.",
+  "key_facts": [
+   "0.5%"
+  ],
+  "gold_docs": [
+   "doc_checking_accounts_purple_account_009"
+  ]
+ },
+ {
+  "id": "q009",
+  "type": "single",
+  "question": "What is the maximum number of Founder Cards that a user can request?",
+  "answer": "A user is permitted to request up to 3 Founder Cards.",
+  "key_facts": [
+   "up to 3"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_sky_blue_005"
+  ]
+ },
+ {
+  "id": "q010",
+  "type": "single",
+  "question": "What is the minimum annual revenue required for an enterprise applicant to qualify for the BNPL Diamond product?",
+  "answer": "To qualify for the BNPL Diamond product, enterprise applicants must demonstrate an annual revenue of at least $50125000.00.",
+  "key_facts": [
+   "$50125000.00"
+  ],
+  "gold_docs": [
+   "doc_buy_now_pay_later_bnpl_diamond_002"
+  ]
+ },
+ {
+  "id": "q011",
+  "type": "single",
+  "question": "What is the minimum credit score required to be considered for the Diamond Elite Card?",
+  "answer": "To be considered for the Diamond Elite Card, you should maintain a credit score of at least 780.",
+  "key_facts": [
+   "780"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_diamond_elite_card_001"
+  ]
+ },
+ {
+  "id": "q012",
+  "type": "single",
+  "question": "What is the minimum balance required to waive the monthly maintenance fee for the Lime Green Account?",
+  "answer": "To waive the $25.00 monthly maintenance fee for the Lime Green Account, your balance must meet or exceed $15,000.",
+  "key_facts": [
+   "$25.00",
+   "$15,000"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_lime_green_002"
+  ]
+ },
+ {
+  "id": "q013",
+  "type": "single",
+  "question": "What is the daily spending limit for the Light Green Account?",
+  "answer": "The daily spending limit for the Light Green Account is $300.",
+  "key_facts": [
+   "$300"
+  ],
+  "gold_docs": [
+   "doc_checking_accounts_light_green_account_001"
+  ]
+ },
+ {
+  "id": "q014",
+  "type": "single",
+  "question": "What is the maximum number of employee cards that can be issued for the Green Rewards Card?",
+  "answer": "You can issue up to 15 employee cards to team members for the Green Rewards Card.",
+  "key_facts": [
+   "15"
+  ],
+  "gold_docs": [
+   "doc_business_credit_cards_green_rewards_card_001"
+  ]
+ },
+ {
+  "id": "q015",
+  "type": "single",
+  "question": "What is the annual limit on the number of referral bonuses a Hunter Green Business Checking customer can receive?",
+  "answer": "A customer can receive up to 10 referral bonuses per year for the Hunter Green Business Checking account.",
+  "key_facts": [
+   "10 referral bonuses"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_hunter_green_001"
+  ]
+ },
+ {
+  "id": "q016",
+  "type": "single",
+  "question": "What is the maximum amount of out-of-network ATM fees that a Navy Blue account holder can receive in rebates per calendar month?",
+  "answer": "Navy Blue account holders are eligible for rebates on out-of-network ATM fees of up to $10 per calendar month.",
+  "key_facts": [
+   "Up to $10 per calendar month"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_navy_blue_009"
+  ]
+ },
+ {
+  "id": "q017",
+  "type": "single",
+  "question": "What is the daily ATM withdrawal limit for an Evergreen Account?",
+  "answer": "The daily ATM withdrawal limit for an Evergreen Account is $750.",
+  "key_facts": [
+   "$750"
+  ],
+  "gold_docs": [
+   "doc_checking_accounts_evergreen_account_002"
+  ]
+ },
+ {
+  "id": "q018",
+  "type": "single",
+  "question": "What is the daily ATM withdrawal limit for the Dark Green Account?",
+  "answer": "The daily ATM withdrawal limit for the Dark Green Account is $300.",
+  "key_facts": [
+   "$300"
+  ],
+  "gold_docs": [
+   "doc_checking_accounts_dark_green_account_002"
+  ]
+ },
+ {
+  "id": "q019",
+  "type": "single",
+  "question": "What is the minimum balance required to waive the monthly maintenance fee on a Lime Green Account?",
+  "answer": "To avoid the $25.00 monthly maintenance fee on a Lime Green Account, you must maintain a balance of at least $15,000.",
+  "key_facts": [
+   "$15,000",
+   "$25.00"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_lime_green_008"
+  ]
+ },
+ {
+  "id": "q020",
+  "type": "single",
+  "question": "What is the specific discount rate applied to eligible fuel transactions for the Silver Zoom Card?",
+  "answer": "The Silver Zoom Card applies a discount rate of 10.0% to eligible fuel transactions.",
+  "key_facts": [
+   "10.0%"
+  ],
+  "gold_docs": [
+   "doc_business_credit_cards_silver_zoom_card_007"
+  ]
+ },
+ {
+  "id": "q021",
+  "type": "single",
+  "question": "What is the monthly maintenance fee for the Sky Blue account once the initial free period ends?",
+  "answer": "Once the six-month free period for the Sky Blue account concludes, the monthly maintenance fee is $25.00.",
+  "key_facts": [
+   "$25.00"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_sky_blue_002"
+  ]
+ },
+ {
+  "id": "q022",
+  "type": "single",
+  "question": "What is the foreign transaction fee for the Bronze Rewards Card?",
+  "answer": "The Bronze Rewards Card carries a foreign transaction fee of 2.75% for purchases processed outside the U.S. or in a non-USD currency.",
+  "key_facts": [
+   "2.75%"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_bronze_rewards_card_006"
+  ]
+ },
+ {
+  "id": "q023",
+  "type": "single",
+  "question": "What is the fee for a cashier's check if a campus-related transaction requires certified funds?",
+  "answer": "If a merchant requires a cashier's check for a campus-related transaction, the fee is 5.",
+  "key_facts": [
+   "5"
+  ],
+  "gold_docs": [
+   "doc_checking_accounts_dark_green_account_006"
+  ]
+ },
+ {
+  "id": "q024",
+  "type": "single",
+  "question": "What is the annual referral limit for Lime Green account holders?",
+  "answer": "Lime Green account holders are limited to a maximum of 12 referrals per year.",
+  "key_facts": [
+   "12 referrals per year"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_lime_green_003"
+  ]
+ },
+ {
+  "id": "q025",
+  "type": "single",
+  "question": "How many hours of complimentary wealth guidance are provided per quarter for the Platinum Plus account?",
+  "answer": "The Platinum Plus account includes 4 hours of complimentary wealth guidance per quarter.",
+  "key_facts": [
+   "4 hours"
+  ],
+  "gold_docs": [
+   "doc_savings_accounts_platinum_plus_account_002"
+  ]
+ },
+ {
+  "id": "q026",
+  "type": "compare",
+  "question": "Which product has a lower annual cost, the Silver Zoom Card or the Virtual Card Management system, and what is that specific cost?",
+  "answer": "The Virtual Card Management system has a lower annual cost of $0.00, as it does not list an annual membership fee, whereas the Silver Zoom Card has an annual membership fee of $74.50.",
+  "key_facts": [
+   "$74.50"
+  ],
+  "gold_docs": [
+   "doc_business_credit_cards_silver_zoom_card_001",
+   "doc_business_credit_cards_virtual_card_management_001"
+  ]
+ },
+ {
+  "id": "q027",
+  "type": "compare",
+  "question": "Between Enterprise Treasury Onboarding, Cobalt Blue Business Checking, and World Blue International Checking, which account has the lowest monthly maintenance fee and what is that specific amount?",
+  "answer": "The Cobalt Blue Business Checking account has the lowest monthly maintenance fee, which is $20.00.",
+  "key_facts": [
+   "$20.00",
+   "$200.00",
+   "$50.00"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_beige_001",
+   "doc_business_checking_accounts_cobalt_blue_001",
+   "doc_business_checking_accounts_world_blue_001"
+  ]
+ },
+ {
+  "id": "q028",
+  "type": "compare",
+  "question": "Between the Diamond Vault Account and the Business Bronze Saver, which account offers the higher Annual Percentage Yield (APY), and what is that specific rate?",
+  "answer": "The Diamond Vault Account offers the higher rate with an APY of 6.5%, compared to the 2.0% base APY offered by the Business Bronze Saver.",
+  "key_facts": [
+   "6.5%",
+   "2.0%"
+  ],
+  "gold_docs": [
+   "doc_business_savings_accounts_joint_business_holders_+_user_roles_001",
+   "doc_business_savings_accounts_diamond_vault_001",
+   "doc_business_savings_accounts_bronze_saver_account_001"
+  ]
+ },
+ {
+  "id": "q029",
+  "type": "compare",
+  "question": "Which account offers a higher Annual Percentage Yield (APY) between the Bluest Account and the Evergreen Account, and what is that rate?",
+  "answer": "The Bluest Account offers a higher rate with 2.25% APY, compared to the 0.05% APY offered by the Evergreen Account.",
+  "key_facts": [
+   "2.25% APY",
+   "0.05% APY"
+  ],
+  "gold_docs": [
+   "doc_checking_accounts_bluest_account_001",
+   "doc_checking_accounts_evergreen_account_001"
+  ]
+ },
+ {
+  "id": "q030",
+  "type": "compare",
+  "question": "If I close my Silver Rewards Card, what is the maximum number of days I have to redeem my rewards, and how does this compare to the window of time I have to request a full refund of my annual fee?",
+  "answer": "You have 45 days to redeem unredeemed rewards after submitting a closure request, which is longer than the 37-day window provided to receive a full refund of the annual fee.",
+  "key_facts": [
+   "45 days",
+   "37 days"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_silver_rewards_card_001",
+   "doc_credit_cards_credit_card_account_logistics_001"
+  ]
+ },
+ {
+  "id": "q031",
+  "type": "compare",
+  "question": "Which account has the lower monthly maintenance fee, World Blue International Checking or Sky Blue: Startup Account, and what is the specific fee amount for that account?",
+  "answer": "The Sky Blue: Startup Account has the lower monthly maintenance fee of $25.00, compared to the $50.00 fee for the World Blue International Checking account.",
+  "key_facts": [
+   "$25.00",
+   "$50.00"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_world_blue_001",
+   "doc_business_checking_accounts_sky_blue_001"
+  ]
+ },
+ {
+  "id": "q032",
+  "type": "compare",
+  "question": "Which service has a higher maximum transaction or capacity limit: the maximum total amount that can be split in Split-the-Bill or the daily send limit for a verified account in the Sending Limits guide?",
+  "answer": "The Split-the-Bill service has a higher limit of $5,500, compared to the $3,500 daily send limit for verified accounts.",
+  "key_facts": [
+   "$5,500",
+   "$3,500"
+  ],
+  "gold_docs": [
+   "doc_everyone_pay_sending_limits_001",
+   "doc_everyone_pay_split-the-bill_001",
+   "doc_everyone_pay_user_blocking_001"
+  ]
+ },
+ {
+  "id": "q033",
+  "type": "compare",
+  "question": "Which product has a lower fee for expedited replacement shipping, the Gold Rewards card or the Bronze Rewards card, and what is the specific cost for each?",
+  "answer": "The Gold Rewards card has a lower expedited shipping fee of $0.00, while the Bronze Rewards card has an expedited shipping fee of $15.00.",
+  "key_facts": [
+   "$0.00",
+   "$15.00"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_crypto-cash_back_001",
+   "doc_credit_cards_credit_card_replacements_001",
+   "doc_credit_cards_virtual_card_management_001"
+  ]
+ },
+ {
+  "id": "q034",
+  "type": "compare",
+  "question": "Which of the three credit cards offers the lowest APR on carried balances, and what is that specific rate?",
+  "answer": "The Platinum Rewards Card offers the lowest APR on carried balances at 16.99%.",
+  "key_facts": [
+   "16.99%",
+   "Platinum Rewards Card"
+  ],
+  "gold_docs": [
+   "doc_business_credit_cards_green_rewards_card_001",
+   "doc_business_credit_cards_business_silver_rewards_card_001",
+   "doc_business_credit_cards_business_platinum_rewards_card_001"
+  ]
+ },
+ {
+  "id": "q035",
+  "type": "compare",
+  "question": "Between the Silver Plus Account and the Green Account, which account requires a lower minimum opening deposit, and what is that specific amount?",
+  "answer": "The Green Account requires a lower minimum opening deposit of $100, whereas the Silver Plus Account requires $1,000.",
+  "key_facts": [
+   "$100",
+   "$1,000",
+   "Green Account",
+   "Silver Plus Account"
+  ],
+  "gold_docs": [
+   "doc_savings_accounts_diamond_elite_account_001",
+   "doc_savings_accounts_silver_plus_account_001",
+   "doc_savings_accounts_green_account_(savings)_001"
+  ]
+ },
+ {
+  "id": "q036",
+  "type": "compare",
+  "question": "Which payment method allows for a higher single transaction amount: Scheduled Payments or QR Transfers, and what is the specific maximum amount allowed for that method?",
+  "answer": "Scheduled Payments allows for a higher single transaction amount, with a maximum per-payment amount of $3,000, whereas QR Transfers are capped at $1,250 per transfer.",
+  "key_facts": [
+   "$3,000",
+   "$1,250"
+  ],
+  "gold_docs": [
+   "doc_everyone_pay_scheduled_payments_001",
+   "doc_everyone_pay_qr_transfers_001"
+  ]
+ },
+ {
+  "id": "q037",
+  "type": "compare",
+  "question": "Which savings account offers the highest Annual Percentage Yield (APY), and what is that specific rate?",
+  "answer": "The Diamond Elite Savings Account offers the highest APY at 7.5%, compared to the 2.0% APY offered by the Bronze Savings Account.",
+  "key_facts": [
+   "7.5%",
+   "2.0%"
+  ],
+  "gold_docs": [
+   "doc_savings_accounts_bronze_account_001",
+   "doc_savings_accounts_diamond_elite_account_001",
+   "doc_savings_accounts_platinum_plus_account_001"
+  ]
+ },
+ {
+  "id": "q038",
+  "type": "compare",
+  "question": "Which credit card has the lowest annual fee, and what is the specific amount of that fee?",
+  "answer": "The Silver Rewards Card has the lowest annual fee, which is $0.00.",
+  "key_facts": [
+   "Silver Rewards Card",
+   "$0.00"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_ecocard_001",
+   "doc_credit_cards_platinum_rewards_card_001",
+   "doc_credit_cards_silver_rewards_card_001"
+  ]
+ },
+ {
+  "id": "q039",
+  "type": "compare",
+  "question": "Which credit card offers a lower APR on carried balances, and what is that specific rate?",
+  "answer": "The Platinum Rewards Card offers a lower APR on carried balances at 16.99%, compared to the 18.99% APR offered by the Business Silver Rewards Card.",
+  "key_facts": [
+   "16.99%",
+   "18.99%",
+   "Platinum Rewards Card"
+  ],
+  "gold_docs": [
+   "doc_business_credit_cards_business_platinum_rewards_card_001",
+   "doc_business_credit_cards_business_silver_rewards_card_001"
+  ]
+ },
+ {
+  "id": "q040",
+  "type": "compare",
+  "question": "Which account offers a higher APY on checking balances, the Gold Years Account or the Green Account, and what is the specific rate for that account?",
+  "answer": "The Gold Years Account offers a higher APY of 1.0% compared to the 0.11% APY offered by the Green Account.",
+  "key_facts": [
+   "1.0%",
+   "0.11%"
+  ],
+  "gold_docs": [
+   "doc_checking_accounts_gold_years_account_001",
+   "doc_checking_accounts_green_fee-free_account_001",
+   "doc_checking_accounts_green_account_(checking)_001"
+  ]
+ },
+ {
+  "id": "q041",
+  "type": "compare",
+  "question": "Which business checking account offers the highest welcome bonus for a referred business, and what is the specific dollar amount of that bonus?",
+  "answer": "The Sky Blue: Startup Account offers the highest welcome bonus for a referred business, which is $250.",
+  "key_facts": [
+   "$250",
+   "$100",
+   "$75"
+  ],
+  "gold_docs": [
+   "doc_business_checking_accounts_sky_blue_001",
+   "doc_business_checking_accounts_cobalt_blue_001",
+   "doc_business_checking_accounts_navy_blue_001"
+  ]
+ },
+ {
+  "id": "q042",
+  "type": "compare",
+  "question": "Which credit card offers the lowest annual fee, and what is the specific amount of that fee?",
+  "answer": "The Business Bronze Rewards Card offers the lowest annual fee, which is $0.00.",
+  "key_facts": [
+   "Business Bronze Rewards Card",
+   "$0.00"
+  ],
+  "gold_docs": [
+   "doc_business_credit_cards_business_bronze_rewards_card_001",
+   "doc_business_credit_cards_business_gold_rewards_card_001",
+   "doc_business_credit_cards_business_platinum_rewards_card_001"
+  ]
+ },
+ {
+  "id": "q043",
+  "type": "compare",
+  "question": "Which card provides the highest total APY for a Silver Saver Account balance of $25,000 or more, and what is the cost to add an owner to a business account?",
+  "answer": "The Business Platinum Rewards Card provides the highest total APY of 4.55% for balances of $25,000 or more, while the fee to add a new owner to a business account is $0.00.",
+  "key_facts": [
+   "4.55%",
+   "Business Platinum Rewards Card",
+   "$0.00"
+  ],
+  "gold_docs": [
+   "doc_business_savings_accounts_joint_business_holders_+_user_roles_001",
+   "doc_business_savings_accounts_silver_saver_account_001"
+  ]
+ },
+ {
+  "id": "q044",
+  "type": "compare",
+  "question": "Which account allows for a higher number of monthly withdrawals, and what is that specific limit?",
+  "answer": "The Gold Savings Account allows for a higher number of withdrawals, with a limit of 20 per month compared to the 10 allowed by the Silver Account.",
+  "key_facts": [
+   "20",
+   "10"
+  ],
+  "gold_docs": [
+   "doc_savings_accounts_gold_account_001",
+   "doc_savings_accounts_silver_account_001"
+  ]
+ },
+ {
+  "id": "q045",
+  "type": "compare",
+  "question": "Which payment method allows for a higher maximum per-transaction amount: a single QR transfer or a scheduled payment, and what is the specific dollar limit for each?",
+  "answer": "A scheduled payment allows for a higher maximum per-transaction amount of $3,000, whereas a single QR transfer is capped at $1,250.",
+  "key_facts": [
+   "$3,000",
+   "$1,250"
+  ],
+  "gold_docs": [
+   "doc_everyone_pay_qr_transfers_001",
+   "doc_everyone_pay_sending_limits_001",
+   "doc_everyone_pay_scheduled_payments_001"
+  ]
+ },
+ {
+  "id": "q046",
+  "type": "procedure",
+  "question": "When processing an interest correction for a savings account, which specific tool must be used to ensure the backend team investigates the underlying issue after the credit has been applied?",
+  "answer": "After applying the credit using the apply_savings_account_credit_6831 tool, the agent must submit an interest discrepancy report using the submit_interest_discrepancy_report_7294 tool.",
+  "key_facts": [
+   "submit_interest_discrepancy_report_7294",
+   "apply_savings_account_credit_6831"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_043"
+  ]
+ },
+ {
+  "id": "q047",
+  "type": "procedure",
+  "question": "What are the specific steps and tool an agent must use to prevent future recurring debit card charges for a customer?",
+  "answer": "The agent must verify the customer's identity, explain that the block affects all recurring payments, and use the set_debit_card_recurring_block_7382 tool with the block_recurring parameter set to true.",
+  "key_facts": [
+   "set_debit_card_recurring_block_7382",
+   "block_recurring: true"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_034"
+  ]
+ },
+ {
+  "id": "q048",
+  "type": "procedure",
+  "question": "What is the required procedure and tool name for an agent to apply a statement credit to a customer's credit card account?",
+  "answer": "An agent must first unlock the apply_statement_credit_8472 tool using unlock_discoverable_agent_tool, then execute it using call_discoverable_agent_tool with the required arguments including user_id, credit_card_account_id, amount, and reason.",
+  "key_facts": [
+   "apply_statement_credit_8472",
+   "unlock_discoverable_agent_tool",
+   "call_discoverable_agent_tool"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_credit_cards_(general)_017"
+  ]
+ },
+ {
+  "id": "q049",
+  "type": "procedure",
+  "question": "Which internal tool should an agent use to clear a velocity block on a debit card, and what is the required reason parameter for this action?",
+  "answer": "An agent should use the clear_debit_card_fraud_alert_4892 tool and set the reason parameter to 'velocity_clear' after verifying the customer's identity.",
+  "key_facts": [
+   "clear_debit_card_fraud_alert_4892",
+   "velocity_clear"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_039"
+  ]
+ },
+ {
+  "id": "q050",
+  "type": "procedure",
+  "question": "Which specific tool should an agent use to activate a Rho-Bank debit card if the issue reason is listed as 'lost'?",
+  "answer": "The agent must use the activate_debit_card_8292 tool for replacement cards issued due to lost, stolen, or fraud reasons.",
+  "key_facts": [
+   "activate_debit_card_8292",
+   "lost"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_024"
+  ]
+ },
+ {
+  "id": "q051",
+  "type": "procedure",
+  "question": "Which internal tool should an agent use to move money between a customer's checking and savings accounts, and what status must both accounts hold before the transfer can proceed?",
+  "answer": "The agent must use the transfer_funds_between_bank_accounts_7291 tool, and both the source and destination accounts must be in ACTIVE or OPEN status.",
+  "key_facts": [
+   "transfer_funds_between_bank_accounts_7291",
+   "ACTIVE or OPEN"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_010"
+  ]
+ },
+ {
+  "id": "q052",
+  "type": "procedure",
+  "question": "What are the specific requirements and the internal tool an agent must use to close a Diamond Elite Account?",
+  "answer": "To close a Diamond Elite Account, the agent must verify that the account status is OPEN, there are no pending transactions, and the balance is either $0 or sufficient to cover the $150 early closure fee. Additionally, the agent must obtain manager approval and use the tool close_bank_account_7392.",
+  "key_facts": [
+   "Diamond Elite Account",
+   "$150",
+   "close_bank_account_7392"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_006"
+  ]
+ },
+ {
+  "id": "q053",
+  "type": "procedure",
+  "question": "If a customer requires both a fee refund and a missing rebate for their checking account, how should an agent proceed when using the apply_checking_account_credit_5829 tool?",
+  "answer": "The agent must combine the corrections into a single credit for the total amount and use the credit_type that applies to the majority of the corrections, as the tool can only be called once per interaction.",
+  "key_facts": [
+   "apply_checking_account_credit_5829",
+   "combine them into a single credit with the total amount",
+   "use the credit_type that applies to the majority of the corrections"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_017"
+  ]
+ },
+ {
+  "id": "q054",
+  "type": "procedure",
+  "question": "Which internal tool should an agent use to retrieve a consolidated list of credit card disputes for a specific user, and what required input must be provided?",
+  "answer": "An agent must use the get_user_dispute_history_7291 tool, providing the user_id as the required input parameter.",
+  "key_facts": [
+   "get_user_dispute_history_7291",
+   "user_id"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_credit_cards_(general)_016"
+  ]
+ },
+ {
+  "id": "q055",
+  "type": "procedure",
+  "question": "What is the specific internal tool name an agent must use to open a personal checking account after verifying eligibility and confirming the account_class?",
+  "answer": "After verifying the customer's identity and eligibility, the agent must use the tool open_bank_account_4821 to open the account.",
+  "key_facts": [
+   "open_bank_account_4821"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_001"
+  ]
+ },
+ {
+  "id": "q056",
+  "type": "procedure",
+  "question": "If a customer has a pending replacement card, what is the required procedure for processing their credit limit increase request?",
+  "answer": "You must verify there are no outstanding replacement card orders, and if one is pending, the request cannot be processed until the replacement is delivered or cancelled.",
+  "key_facts": [
+   "pending_replacement_card",
+   "the CLI cannot be processed until the replacement is delivered or cancelled"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_credit_card_account_logistics_007"
+  ]
+ },
+ {
+  "id": "q057",
+  "type": "procedure",
+  "question": "What is the specific internal tool name an agent must unlock and invoke to apply corrected rewards after a cash back dispute is resolved?",
+  "answer": "An agent must use unlock_discoverable_agent_tool to unlock the update_transaction_rewards_3847 tool and then use call_discoverable_agent_tool to invoke it for applying the corrected rewards.",
+  "key_facts": [
+   "unlock_discoverable_agent_tool",
+   "update_transaction_rewards_3847",
+   "call_discoverable_agent_tool"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_credit_cards_(general)_004"
+  ]
+ },
+ {
+  "id": "q058",
+  "type": "procedure",
+  "question": "What is the specific internal tool name an agent must use to temporarily lock a debit card, and what is one condition that must be met regarding the card's status before performing this action?",
+  "answer": "To temporarily lock a debit card, the agent must use the freeze_debit_card_3892 tool. The card must currently be in ACTIVE status for the freeze to be performed.",
+  "key_facts": [
+   "freeze_debit_card_3892",
+   "ACTIVE status"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_026"
+  ]
+ },
+ {
+  "id": "q059",
+  "type": "procedure",
+  "question": "Which internal tool should an agent use to retrieve the debit card information for a specific checking account, and what must be verified regarding the card's status before freezing it?",
+  "answer": "An agent must use the get_debit_cards_by_account_id_7823 tool to retrieve debit card information, and they must verify the card exists and check its current status before freezing it.",
+  "key_facts": [
+   "get_debit_cards_by_account_id_7823",
+   "Verify the card exists and check its current status"
+  ],
+  "gold_docs": [
+   "doc_bank_accounts_bank_accounts_(general)_028"
+  ]
+ },
+ {
+  "id": "q060",
+  "type": "procedure",
+  "question": "Which specific tool name must an agent use to unlock and call the system when processing a replacement credit card request?",
+  "answer": "To process a replacement credit card, the agent must use the tool name order_replacement_credit_card_7291 with both the unlock_discoverable_agent_tool and call_discoverable_agent_tool functions.",
+  "key_facts": [
+   "order_replacement_credit_card_7291",
+   "unlock_discoverable_agent_tool",
+   "call_discoverable_agent_tool"
+  ],
+  "gold_docs": [
+   "doc_credit_cards_credit_card_replacements_001"
+  ]
+ }
+]

@@ -67,6 +67,8 @@ def _category_terms(cat: str) -> list[str]:
 class Engine:
     """Holds loaded contexts and answers queries."""
 
+    search_share = float(os.environ.get("NEXUS_LITE_SEARCH_SHARE", "0.45"))
+
     def __init__(self, root: str, default_model: str | None = None):
         self.root = root
         self.contexts: dict[str, Context] = {}
@@ -127,16 +129,34 @@ class Engine:
             if d not in hit_docs:
                 hit_docs.append(d)
 
+        # 0) the strongest raw search hits always come first (up to search_share of the budget), so the
+        #    compiled view can only add to what plain hybrid retrieval would have returned
+        top_lines, top_docs, top_ids, top_used = [], [], set(), 0
+        for cid, _ in hits:
+            block = f"--- [{ctx.chunk_doc[cid]}] ---\n{ctx.chunk_text[cid]}"
+            if top_used + len(block) > self.search_share * max_chars:
+                if not top_lines:
+                    top_lines.append(block[: int(self.search_share * max_chars)])
+                    top_ids.add(cid)
+                    top_docs.append(ctx.chunk_doc[cid])
+                break
+            top_lines.append(block)
+            top_ids.add(cid)
+            top_used += len(block)
+            if ctx.chunk_doc[cid] not in top_docs:
+                top_docs.append(ctx.chunk_doc[cid])
+        rest = max_chars - top_used
+
         # 1) entity fact sheets (only for 1-2 specific entities; bigger sets use rosters)
-        sheet_docs: set[str] = set()
+        sheet_docs: set[str] = set(top_docs)
         if plan["entities"] and len(plan["entities"]) <= 2:
-            per = max_chars // (2 * len(plan["entities"]))
+            per = rest // (2 * len(plan["entities"]))
             for ent in plan["entities"]:
                 art = ctx.artifact(f"fact_sheet:{ent}")
                 if art:
                     body = art["body"]
                     if len(body) > per:  # keep key figures + the docs the search ranked highest
-                        body = self._focus_sheet(ctx, ent, body, hit_docs, per)
+                        body = self._focus_sheet(ctx, ent, body, hit_docs, per, exclude=set(top_docs))
                     srcs = [s for s in json.loads(art["sources"]) if f"[{s}]" in body]
                     sheet_docs.update(srcs)
                     sections.append((f"Fact sheet: {ent}", body, srcs))
@@ -158,7 +178,7 @@ class Engine:
             for cat in plan["categories"][:2]:
                 art = ctx.artifact(f"roster:{cat}")
                 if art and "\n- (" in art["body"]:  # skip rosters without any key figures
-                    sections.append((f"Roster: {cat}", art["body"][: max_chars // (2 * n)],
+                    sections.append((f"Roster: {cat}", art["body"][: rest // (2 * n)],
                                      json.loads(art["sources"])))
 
         # 3) procedures from top docs (+ explicitly named tools)
@@ -195,7 +215,7 @@ class Engine:
         chunk_srcs = []
         for cid, _ in hits[: k + 4]:
             d = ctx.chunk_doc[cid]
-            if d in sheet_docs:
+            if d in sheet_docs or cid in top_ids:
                 continue
             chunk_lines.append(f"--- [{d}] ---\n{ctx.chunk_text[cid]}")
             chunk_srcs.append(d)
@@ -206,6 +226,11 @@ class Engine:
 
         # budget: fill in priority order, truncate the last section that fits partially
         out, sources, used = [], [], 0
+        if top_lines:
+            block = "## Top matches\n" + "\n\n".join(top_lines)
+            out.append(block)
+            used += len(block)
+            sources += [d for d in top_docs if d not in sources]
         prio = ({"Rost": 0, "Fact": 1, "Proc": 2, "Sear": 3, "Tool": 4} if plan["comparative"]
                 else {"Proc": 0, "Fact": 1, "Tool": 2, "Sear": 3, "Rost": 4})
         order = sorted(sections, key=lambda s: prio[s[0][:4]])
@@ -222,9 +247,12 @@ class Engine:
         return "\n\n".join(out), sources
 
     @staticmethod
-    def _focus_sheet(ctx: Context, ent: str, body: str, hit_docs: list[str], limit: int) -> str:
+    def _focus_sheet(ctx: Context, ent: str, body: str, hit_docs: list[str], limit: int,
+                     exclude: set[str] | None = None) -> str:
         head, _, rest = body.partition("\n## Source documents\n")
         parts = re.split(r"\n(?=### )", rest)
+        if exclude:  # documents already shown elsewhere in the answer
+            parts = [p for p in parts if not any(f"[{d}]" in p for d in exclude)]
         ranked = sorted(parts, key=lambda p: next((i for i, d in enumerate(hit_docs) if f"[{d}]" in p), 999))
         out = head[: limit // 3] + "\n## Most relevant source documents\n"
         added = 0

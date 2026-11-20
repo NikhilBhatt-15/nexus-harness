@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -82,6 +83,78 @@ def _retry_after_seconds(err: Exception) -> float | None:
     return float(m.group(1)) if m else None
 
 
+# ---------------------------------------------------------------------------
+# API key pools: <PROVIDER>_API_KEYS=k1,k2,... -> round-robin + failover on rate limits
+# ---------------------------------------------------------------------------
+
+_PROVIDER_ENV = {"gemini": "GEMINI", "openai": "OPENAI", "anthropic": "ANTHROPIC", "groq": "GROQ",
+                 "openrouter": "OPENROUTER", "mistral": "MISTRAL", "deepseek": "DEEPSEEK", "xai": "XAI",
+                 "together_ai": "TOGETHERAI", "cohere": "COHERE"}
+
+
+class KeyPool:
+    """Rotates API keys for one provider. Calls go round-robin; a key that hits a rate limit or quota
+    cools down (for the provider's retry-after, or a default) and the next key is used immediately.
+    Only when every key is cooling down does the caller wait. Keys are never logged; events use #index."""
+
+    _pools: dict[str, "KeyPool"] = {}
+    _lock = threading.Lock()
+
+    def __init__(self, env_name: str, keys: list[str]):
+        self.env_name = env_name
+        self.keys = keys
+        self.cool_until = [0.0] * len(keys)
+        self.uses = [0] * len(keys)
+        self.limited = [0] * len(keys)
+        self.next = 0
+        self.lock = threading.Lock()
+
+    @classmethod
+    def for_model(cls, model: str) -> "KeyPool | None":
+        provider = model.split("/", 1)[0] if "/" in model else ""
+        if not provider and model.startswith(("gpt", "o1", "o3", "o4", "chatgpt")):
+            provider = "openai"
+        elif not provider and model.startswith("claude"):
+            provider = "anthropic"
+        prefix = _PROVIDER_ENV.get(provider)
+        if not prefix:
+            return None
+        env_name = f"{prefix}_API_KEYS"
+        keys = [k.strip() for k in os.environ.get(env_name, "").split(",") if k.strip()]
+        if len(keys) < 2:
+            return None
+        with cls._lock:
+            pool = cls._pools.get(env_name)
+            if pool is None or pool.keys != keys:
+                pool = cls._pools[env_name] = KeyPool(env_name, keys)
+            return pool
+
+    def acquire(self) -> tuple[int, float]:
+        """Return (key index, seconds to wait first)."""
+        with self.lock:
+            now = time.time()
+            n = len(self.keys)
+            for step in range(n):
+                i = (self.next + step) % n
+                if self.cool_until[i] <= now:
+                    self.next = (i + 1) % n
+                    self.uses[i] += 1
+                    return i, 0.0
+            i = min(range(n), key=lambda j: self.cool_until[j])
+            self.uses[i] += 1
+            return i, self.cool_until[i] - now
+
+    def cool(self, i: int, seconds: float) -> None:
+        with self.lock:
+            self.cool_until[i] = max(self.cool_until[i], time.time() + seconds)
+            self.limited[i] += 1
+
+    def stats(self) -> list[dict]:
+        now = time.time()
+        return [{"key": f"#{i + 1}", "uses": self.uses[i], "rate_limited": self.limited[i],
+                 "cooling_s": max(0, round(self.cool_until[i] - now))} for i in range(len(self.keys))]
+
+
 class LLM:
     def __init__(self, model: str, *, tool_mode: ToolMode = "auto", max_retries: int = 6,
                  max_wait_s: float = 120.0, **params: Any):
@@ -147,16 +220,36 @@ class LLM:
         kwargs = dict(self.params)
         if tools:
             kwargs["tools"] = [t.schema() for t in tools]
+        pool = KeyPool.for_model(self.model)
         delay = 2.0
-        for attempt in range(self.max_retries + 1):
+        attempts = self.max_retries + 1 + (2 * len(pool.keys) if pool else 0)
+        for attempt in range(attempts):
+            ki = None
+            if pool:
+                ki, wait_first = pool.acquire()
+                if wait_first > self.max_wait_s:
+                    raise QuotaExhausted(f"{self.model}: all {len(pool.keys)} {pool.env_name} keys are rate-limited "
+                                         f"(next free in {wait_first:.0f}s)")
+                if wait_first > 0:
+                    if getattr(self, "on_retry", None):
+                        self.on_retry(attempt + 1, wait_first, f"all keys rate-limited; waiting for key #{ki + 1}")
+                    time.sleep(wait_first)
+                kwargs["api_key"] = pool.keys[ki]
             try:
                 resp = litellm.completion(model=self.model, messages=messages, **kwargs)
                 break
             except Exception as e:
                 name = type(e).__name__
-                if not any(r in name for r in _RETRYABLE) or attempt == self.max_retries:
+                if not any(r in name for r in _RETRYABLE) or attempt == attempts - 1:
                     raise
-                wait = _retry_after_seconds(e) or delay
+                hint = _retry_after_seconds(e)
+                if pool is not None and ki is not None and "RateLimit" in name:
+                    # key-specific limit: park this key and move straight on to the next one
+                    pool.cool(ki, hint or 60.0)
+                    if getattr(self, "on_retry", None):
+                        self.on_retry(attempt + 1, 0, f"key #{ki + 1} rate-limited; switching key")
+                    continue
+                wait = hint or delay
                 if wait > self.max_wait_s:
                     raise QuotaExhausted(f"{self.model}: {str(e).splitlines()[0][:300]} (retry after {wait:.0f}s)") from e
                 if getattr(self, "on_retry", None):

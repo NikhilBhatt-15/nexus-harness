@@ -462,3 +462,42 @@ def test_readonly_python_classification_and_auto_approval(tmp_path):
         assert not (tmp_path / "f.txt").exists()
     finally:
         ts.teardown()
+
+
+def test_key_pool_rotation_and_failover(monkeypatch):
+    import types
+
+    import litellm
+
+    from nexus_agent import llm as llm_mod
+
+    class RateLimitError(Exception):
+        pass
+
+    monkeypatch.setenv("GEMINI_API_KEYS", "k1,k2,k3")
+    llm_mod.KeyPool._pools.clear()
+    used = []
+
+    def fake_completion(model, messages, api_key=None, **kw):
+        used.append(api_key)
+        if api_key == "k1":
+            raise RateLimitError("429 quota exceeded, retry in 30s")
+        msg = types.SimpleNamespace(content="hi", tool_calls=None)
+        return types.SimpleNamespace(choices=[types.SimpleNamespace(message=msg)],
+                                     usage=types.SimpleNamespace(prompt_tokens=1, completion_tokens=1))
+
+    monkeypatch.setattr(litellm, "completion", fake_completion)
+    monkeypatch.setattr(litellm, "completion_cost", lambda **k: 0.0)
+    m = LLM("gemini/gemini-test", tool_mode="native")
+    events = []
+    m.on_retry = lambda a, w, e: events.append((w, e))
+    for _ in range(4):
+        assert m.complete([{"role": "user", "content": "x"}]).text == "hi"
+    assert used[:2] == ["k1", "k2"]                 # k1 limited -> immediate switch, no wait
+    assert "k1" not in used[2:]                      # k1 parked for its retry-after
+    assert set(used[2:]) == {"k2", "k3"}             # round-robin over the healthy keys
+    assert events and events[0][0] == 0 and "switching key" in events[0][1]
+    stats = llm_mod.KeyPool.for_model("gemini/x").stats()
+    assert stats[0]["rate_limited"] == 1 and stats[0]["cooling_s"] > 20
+    assert all("k1" not in str(s) for s in stats)    # keys never exposed
+    llm_mod.KeyPool._pools.clear()
