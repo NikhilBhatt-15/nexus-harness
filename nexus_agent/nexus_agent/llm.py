@@ -96,6 +96,7 @@ class LLM:
         self.total_input_tokens = 0
         self.total_output_tokens = 0
         self.calls = 0
+        self.on_retry = None  # callback(attempt, wait_s, error_text) while backing off
 
     def _supports_tools(self) -> bool:
         try:
@@ -158,6 +159,8 @@ class LLM:
                 wait = _retry_after_seconds(e) or delay
                 if wait > self.max_wait_s:
                     raise QuotaExhausted(f"{self.model}: {str(e).splitlines()[0][:300]} (retry after {wait:.0f}s)") from e
+                if getattr(self, "on_retry", None):
+                    self.on_retry(attempt + 1, wait, f"{name}: {str(e).splitlines()[0][:200]}")
                 time.sleep(wait)
                 delay = min(delay * 2, 60)
         self.calls += 1

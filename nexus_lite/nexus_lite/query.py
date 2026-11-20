@@ -227,10 +227,16 @@ class Engine:
         parts = re.split(r"\n(?=### )", rest)
         ranked = sorted(parts, key=lambda p: next((i for i, d in enumerate(hit_docs) if f"[{d}]" in p), 999))
         out = head[: limit // 3] + "\n## Most relevant source documents\n"
+        added = 0
         for p in ranked:
+            if not p.strip():
+                continue
             if len(out) + len(p) > limit:
+                if added == 0:  # never return an empty sheet: include the top document, truncated
+                    out += "\n" + p[: max(0, limit - len(out))] + "\n(... truncated)"
                 break
             out += "\n" + p
+            added += 1
         return out
 
     # ------------------------------------------------------------------ answer

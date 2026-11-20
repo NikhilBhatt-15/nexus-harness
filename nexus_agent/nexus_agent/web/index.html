@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nexus-agent</title>
+<style>
+:root{--bg:#f7f7f5;--panel:#fff;--ink:#1d1d1b;--muted:#6b6b66;--line:#e4e3de;--accent:#2f6f5e;--accent-ink:#fff;
+--tool:#f1f0eb;--ok:#2f7d4f;--err:#b3412f;--warn:#9a6a12;--code:#f3f2ee;--user:#e9f1ee}
+@media (prefers-color-scheme:dark){:root{--bg:#151514;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9a9890;--line:#34332f;
+--accent:#5fb39a;--accent-ink:#0d1a16;--tool:#24231f;--ok:#6cc68f;--err:#e98b78;--warn:#e0b45c;--code:#262521;--user:#1f2b27}}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);display:flex}
+aside{width:280px;flex:none;border-right:1px solid var(--line);background:var(--panel);padding:16px;overflow:auto}
+aside h1{font-size:17px;margin:0 0 2px}aside .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 6px}
+.kv{font-size:13px;margin:2px 0}.kv b{font-weight:600}
+.ts{font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin:4px 0;word-break:break-word}
+.ts .n{font-weight:600}.ts .t{color:var(--muted)}
+.sess{display:block;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:6px 8px;
+color:var(--ink);font:inherit;font-size:12.5px;cursor:pointer}.sess:hover{border-color:var(--line)}.sess.cur{border-color:var(--accent)}
+button.new{width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;font:inherit}
+main{flex:1;display:flex;flex-direction:column;min-width:0}
+#log{flex:1;overflow:auto;padding:24px max(16px,calc((100% - 860px)/2))}
+.msg{margin:0 0 14px}.user{background:var(--user);padding:10px 14px;border-radius:12px;white-space:pre-wrap}
+.asst{padding:2px 2px}.asst p{margin:.4em 0}.asst pre,.tool pre{background:var(--code);padding:10px;border-radius:8px;overflow:auto;font-size:12.5px;margin:6px 0}
+.asst code{background:var(--code);padding:1px 4px;border-radius:4px;font-size:.92em}.asst pre code{background:none;padding:0}
+.asst table{border-collapse:collapse;margin:8px 0;font-size:13.5px;display:block;overflow:auto}.asst th,.asst td{border:1px solid var(--line);padding:4px 8px;text-align:left}
+.tool{background:var(--tool);border:1px solid var(--line);border-radius:10px;margin:6px 0;font-size:13px}
+.tool summary{cursor:pointer;padding:7px 10px;list-style:none;display:flex;gap:8px;align-items:center}
+.tool summary::-webkit-details-marker{display:none}.tool .name{font-family:ui-monospace,Consolas,monospace;font-weight:600}
+.tool .args{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.tool .body{padding:0 10px 8px}.st{font-size:11.5px;padding:1px 7px;border-radius:99px;border:1px solid currentColor}
+.st.ok{color:var(--ok)}.st.err{color:var(--err)}.st.run{color:var(--muted)}.st.off{color:var(--warn)}
+.note{color:var(--muted);font-size:12.5px;margin:6px 0;border-left:3px solid var(--line);padding-left:8px}
+.approve{border:1px solid var(--warn);background:var(--panel);border-radius:10px;padding:10px 12px;margin:8px 0}
+.approve pre{background:var(--code);padding:8px;border-radius:6px;font-size:12px;overflow:auto;max-height:200px}
+.approve button{margin-right:8px;padding:6px 14px;border-radius:8px;border:1px solid var(--line);cursor:pointer;font:inherit}
+.approve .yes{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.plan{border:1px dashed var(--line);border-radius:10px;padding:8px 12px;margin:8px 0;font-size:13px}.plan .d{text-decoration:line-through;color:var(--muted)}
+.done{font-size:12.5px;color:var(--muted);margin:4px 0 18px}.done.bad{color:var(--warn)}
+form{border-top:1px solid var(--line);background:var(--panel);padding:12px max(16px,calc((100% - 860px)/2));display:flex;gap:8px}
+textarea{flex:1;resize:none;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:46px;max-height:200px}
+form button{padding:0 18px;border-radius:10px;border:none;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}
+form button:disabled{opacity:.5;cursor:default}
+.empty{color:var(--muted);text-align:center;margin-top:18vh}.empty b{color:var(--ink)}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (max-width:760px){aside{display:none}}
+</style>
+</head>
+<body>
+<aside>
+  <h1>nexus-agent</h1><div class="sub">any LLM · attachable tools</div>
+  <div id="info"></div>
+  <h2>Sessions</h2><div id="sessions"></div>
+  <button class="new" id="newchat">+ New chat</button>
+</aside>
+<main>
+  <div id="log"><div class="empty" id="empty"><b>Ask the agent to do something.</b><br>It plans, calls tools, and reports back.<br>Risky actions ask for your approval here.</div></div>
+  <form id="f"><textarea id="q" rows="1" placeholder="Message the agent… (Enter to send, Shift+Enter for a new line)"></textarea><button id="send">Send</button></form>
+</main>
+<script>
+const $=s=>document.querySelector(s), log=$('#log');
+let sessionId=null, busy=false, toolCards={}, cost=0;
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function md(src){
+  const blocks=[]; src=String(src||'').replace(/```(\w*)\n([\s\S]*?)```/g,(_,l,c)=>{blocks.push(`<pre><code>${esc(c)}</code></pre>`);return `\u0000${blocks.length-1}\u0000`});
+  const lines=src.split('\n'), out=[]; let i=0;
+  const inline=t=>esc(t).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|\W)\*([^*\n]+)\*/g,'$1<i>$2</i>');
+  while(i<lines.length){const l=lines[i];
+    if(/^\s*\|.*\|\s*$/.test(l)&&i+1<lines.length&&/^\s*\|[\s:|-]+\|\s*$/.test(lines[i+1])){
+      const row=r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      let h='<table><tr>'+row(l).map(c=>`<th>${inline(c)}</th>`).join('')+'</tr>'; i+=2;
+      while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){h+='<tr>'+row(lines[i]).map(c=>`<td>${inline(c)}</td>`).join('')+'</tr>';i++}
+      out.push(h+'</table>');continue}
+    if(/^\s*[-*•] /.test(l)){let h='<ul>';while(i<lines.length&&/^\s*[-*•] /.test(lines[i])){h+=`<li>${inline(lines[i].replace(/^\s*[-*•] /,''))}</li>`;i++}out.push(h+'</ul>');continue}
+    if(/^\s*\d+[.)] /.test(l)){let h='<ol>';while(i<lines.length&&/^\s*\d+[.)] /.test(lines[i])){h+=`<li>${inline(lines[i].replace(/^\s*\d+[.)] /,''))}</li>`;i++}out.push(h+'</ol>');continue}
+    const m=l.match(/^(#{1,4}) (.*)/); if(m){out.push(`<h${m[1].length+2}>${inline(m[2])}</h${m[1].length+2}>`);i++;continue}
+    if(l.trim()==='') {i++;continue}
+    out.push(`<p>${inline(l)}</p>`); i++}
+  return out.join('').replace(/\u0000(\d+)\u0000/g,(_,n)=>blocks[n]);
+}
+function add(html,cls){$('#empty')?.remove();const d=document.createElement('div');d.className='msg '+(cls||'');d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+async function api(path,opts){const r=await fetch(path,{headers:{'Content-Type':'application/json'},...opts});if(!r.ok)throw new Error(await r.text());return r.json()}
+
+async function loadInfo(){
+  try{const i=await api('/v1/info');
+    $('#info').innerHTML=`<div class="kv"><b>Model</b> ${esc(i.model)}</div><div class="kv"><b>Permissions</b> ${esc(i.mode)}</div>`+
+      (i.skills?.length?`<div class="kv"><b>Skills</b> ${esc(i.skills.join(', '))}</div>`:'')+
+      '<h2>Toolsets</h2>'+i.toolsets.map(t=>{const [n,...r]=t.split(': ');return `<div class="ts"><div class="n">${esc(n)}</div><div class="t">${esc(r.join(': '))}</div></div>`}).join('');
+  }catch(e){$('#info').textContent='info unavailable: '+e.message}
+  loadSessions();
+}
+async function loadSessions(){
+  try{const s=await api('/v1/sessions');$('#sessions').innerHTML=s.slice(0,15).map(x=>`<button class="sess ${x.id===sessionId?'cur':''}" data-id="${esc(x.id)}">${esc(x.title||x.id)} <span style="color:var(--muted)">· ${x.messages} msgs</span></button>`).join('')||'<div class="note">none yet</div>';
+    document.querySelectorAll('.sess').forEach(b=>b.onclick=()=>openSession(b.dataset.id));}catch(e){}
+}
+async function openSession(id){
+  sessionId=id; log.innerHTML=''; toolCards={};
+  const msgs=await api(`/v1/sessions/${id}/messages`);
+  for(const m of msgs){
+    if(m.role==='user') add(esc(m.content),'user');
+    else if(m.role==='assistant'){ if(m.content) add(md(m.content),'asst'); for(const c of m.tool_calls||[]) toolCard({id:c.id,name:c.function.name,arguments:JSON.parse(c.function.arguments||'{}')}); }
+    else if(m.role==='tool') toolResult({id:m.tool_call_id,ok:!String(m.content).startsWith('Error'),preview:m.content,chars:String(m.content).length});
+  }
+  loadSessions();
+}
+function toolCard(ev){
+  const d=add(`<details class="tool"><summary><span class="st run"><span class="spin"></span></span><span class="name">${esc(ev.name)}</span><span class="args">${esc(JSON.stringify(ev.arguments))}</span></summary><div class="body"><div class="note">arguments</div><pre>${esc(JSON.stringify(ev.arguments,null,1))}</pre><div class="res"></div></div></details>`);
+  toolCards[ev.id]=d;
+}
+function toolResult(ev){
+  const d=toolCards[ev.id]; if(!d) return; const st=d.querySelector('.st');
+  st.className='st '+(ev.ok?'ok':'err'); st.textContent=ev.ok?(ev.offloaded?'ok · offloaded':'ok'):'error';
+  if(ev.offloaded) st.classList.add('off');
+  d.querySelector('.res').innerHTML=`<div class="note">result · ${ev.chars} chars${ev.ms!=null?` · ${ev.ms} ms`:''}${ev.offloaded?' · full output saved to disk, model saw a preview':''}</div><pre>${esc(ev.preview)}</pre>`;
+}
+function render(ev,runId){
+  switch(ev.type){
+    case 'assistant': if(ev.text&&ev.tool_calls?.length) add(`<div class="note">${esc(ev.text)}</div>`); break;
+    case 'tool_call': toolCard(ev); break;
+    case 'tool_result': toolResult(ev); break;
+    case 'denied': add(`<div class="note" style="color:var(--err)">denied: ${esc(ev.reason)}</div>`); break;
+    case 'plan': {const old=document.querySelector('.plan:last-of-type');add('<b>Plan</b>'+ev.items.map((t,i)=>`<div class="${t.done?'d':''}">${i+1}. ${esc(t.step)}</div>`).join(''),'plan');break}
+    case 'retry': add(`<div class="note" style="color:var(--warn)">model busy (${esc(ev.error)}), retry ${ev.attempt} in ${ev.wait_s}s…</div>`); break;
+    case 'context_edit': add(`<div class="note">context: cleared ${ev.cleared_tool_results} old tool results to save space</div>`); break;
+    case 'compaction': add(`<div class="note">context: summarized ${ev.summarized_messages} earlier messages</div>`); break;
+    case 'done':
+      if(ev.text) add(md(ev.text),'asst');
+      cost+=ev.cost_usd||0;
+      add(`${ev.stop_reason==='done'?'✓':'⚠'} ${esc(ev.stop_reason)} · ${ev.steps} steps · ${ev.tool_calls} tool calls · $${(ev.cost_usd||0).toFixed(4)}${ev.error?' · '+esc(ev.error):''}`,'done'+(ev.stop_reason==='done'?'':' bad'));
+      break;
+  }
+}
+async function pollApproval(runId){
+  while(busy){
+    try{const r=await api(`/v1/runs/${runId}`); if(r.pending_approval&&!document.querySelector(`[data-run="${runId}"]`)){
+      const p=r.pending_approval; const d=add(`<div data-run="${runId}"><b>Approve ${esc(p.tool)}?</b> <span class="note">risk: ${esc(p.risk)}</span><pre>${esc(JSON.stringify(p.arguments,null,1))}</pre><button class="yes">Allow</button><button class="no">Deny</button></div>`,'approve');
+      const answer=async allow=>{d.querySelectorAll('button').forEach(b=>b.disabled=true);d.querySelector('b').textContent=allow?'Allowed':'Denied';await api(`/v1/runs/${runId}/approve`,{method:'POST',body:JSON.stringify({allow})});d.querySelector('[data-run]')?.removeAttribute('data-run')};
+      d.querySelector('.yes').onclick=()=>answer(true); d.querySelector('.no').onclick=()=>answer(false);
+    }}catch(e){}
+    await new Promise(r=>setTimeout(r,700));
+  }
+}
+async function send(text){
+  busy=true; $('#send').disabled=true; add(esc(text),'user');
+  const run=await api('/v1/runs',{method:'POST',body:JSON.stringify({task:text,session_id:sessionId})});
+  sessionId=run.session_id; pollApproval(run.id);
+  await new Promise(resolve=>{
+    const es=new EventSource(`/v1/runs/${run.id}/stream`);
+    es.onmessage=m=>{const ev=JSON.parse(m.data); if(ev.type!=='user') render(ev,run.id); if(ev.type==='done'){es.close();resolve()}};
+    es.onerror=()=>{es.close();resolve()};
+  });
+  busy=false; $('#send').disabled=false; loadSessions(); $('#q').focus();
+}
+$('#f').onsubmit=e=>{e.preventDefault();const t=$('#q').value.trim();if(!t||busy)return;$('#q').value='';$('#q').style.height='';send(t)};
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#f').requestSubmit()}});
+$('#q').addEventListener('input',e=>{e.target.style.height='';e.target.style.height=Math.min(200,e.target.scrollHeight)+'px'});
+$('#newchat').onclick=()=>{sessionId=null;log.innerHTML='<div class="empty" id="empty"><b>New chat.</b></div>';loadSessions()};
+loadInfo();
+</script>
+</body>
+</html>

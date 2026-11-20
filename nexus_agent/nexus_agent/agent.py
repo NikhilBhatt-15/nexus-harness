@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import json
 import platform
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from nexus_agent.llm import LLM, Completion, QuotaExhausted
-from nexus_agent.runtime import (COMPACT_PROMPT, Approver, Mode, Permissions, Session, load_skills,
+from nexus_agent.runtime import (COMPACT_PROMPT, Approver, Mode, Permissions, Session, load_skills, sessions_dir,
                                  split_for_compaction, truncate)
 from nexus_agent.tools import Tool, Toolset, render_result, tool
 
@@ -63,6 +64,10 @@ class Agent:
         max_steps: int = 50,
         max_cost_usd: float | None = None,
         max_tool_chars: int = 16_000,
+        offload_chars: int = 6_000,
+        preview_chars: int = 2_000,
+        clear_tool_results_at: float = 0.5,
+        keep_tool_results: int = 6,
         compact_at: float = 0.75,
         keep_recent: int = 12,
         session: Session | str | bool | None = None,
@@ -88,6 +93,11 @@ class Agent:
         self.max_steps = max_steps
         self.max_cost_usd = max_cost_usd
         self.max_tool_chars = max_tool_chars
+        self.offload_chars = offload_chars
+        self.preview_chars = preview_chars
+        self.clear_tool_results_at = clear_tool_results_at
+        self.keep_tool_results = keep_tool_results
+        self.todos: list[dict] = []
         self.compact_at = compact_at
         self.keep_recent = keep_recent
         self.on_event = on_event
@@ -108,6 +118,11 @@ class Agent:
             self.attach(t)
         if self.skills:
             self.attach(self._skills_toolset())
+        self.llm.on_retry = lambda attempt, wait, err: self._emit(
+            {"type": "retry", "attempt": attempt, "wait_s": round(wait, 1), "error": err})
+        run_id = self.session.id if self.session else time.strftime("%Y%m%d-%H%M%S")
+        self.artifacts_dir = sessions_dir().parent / "artifacts" / run_id
+        self.attach(self._context_toolset())
 
     # ------------------------------------------------------------------ tools
     def attach(self, item: Toolset | Tool) -> "Agent":
@@ -151,6 +166,96 @@ class Agent:
 
         return Toolset("skills", [load_skill])
 
+    def _context_toolset(self) -> Toolset:
+        """Built-in context tools: page through offloaded tool outputs, keep a visible plan."""
+        agent = self
+
+        def _artifact(output_id: str) -> Path:
+            p = agent.artifacts_dir / f"{Path(output_id).name}.txt"
+            if not p.exists():
+                raise FileNotFoundError(f"no saved output {output_id!r}")
+            return p
+
+        @tool
+        def read_tool_output(output_id: str, offset: int = 0, limit: int = 6000) -> str:
+            """Read part of a large tool output that was saved instead of being shown in full.
+
+            Args:
+                output_id: The id given in the "[Full output saved as ...]" note.
+                offset: Character offset to start from.
+                limit: Number of characters to return.
+            """
+            text = _artifact(output_id).read_text(encoding="utf-8")
+            end = min(len(text), offset + limit)
+            return f"[{output_id} chars {offset}-{end} of {len(text)}]\n{text[offset:end]}"
+
+        @tool
+        def grep_tool_output(output_id: str, pattern: str, context_lines: int = 0) -> str:
+            """Search a saved large tool output with a regular expression; returns matching lines.
+
+            Args:
+                output_id: The saved output id.
+                pattern: Regular expression (case-insensitive).
+                context_lines: Lines of context around each match.
+            """
+            lines = _artifact(output_id).read_text(encoding="utf-8").splitlines()
+            rx = re.compile(pattern, re.I)
+            hits = [i for i, ln in enumerate(lines) if rx.search(ln)]
+            out: list[str] = []
+            for i in hits[:200]:
+                for j in range(max(0, i - context_lines), min(len(lines), i + context_lines + 1)):
+                    out.append(f"{j + 1}: {lines[j][:300]}")
+            return "\n".join(out) or "(no matches)"
+
+        @tool
+        def update_plan(items: list[str], done: list[int] | None = None) -> str:
+            """Write or update your task plan (a checklist that stays visible to you every step).
+            Use it for multi-step tasks; mark finished steps in `done`.
+
+            Args:
+                items: The plan, one short step per item.
+                done: 1-based numbers of the steps that are finished.
+            """
+            done_set = set(done or [])
+            agent.todos = [{"step": it, "done": i in done_set} for i, it in enumerate(items, 1)]
+            agent._emit({"type": "plan", "items": agent.todos})
+            return "plan updated"
+
+        return Toolset("context", [read_tool_output, grep_tool_output, update_plan])
+
+    def _offload(self, call_id: str, name: str, out: str) -> str:
+        """Large tool outputs go to disk; the model sees a preview plus a handle (context offloading)."""
+        if len(out) <= self.offload_chars:
+            return out
+        self.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        oid = re.sub(r"[^\w.-]", "_", f"{name}-{call_id}")[:80]
+        (self.artifacts_dir / f"{oid}.txt").write_text(out, encoding="utf-8")
+        head = out[: self.preview_chars]
+        return (f"{head}\n\n[Full output saved as `{oid}`: {len(out)} chars, {out.count(chr(10)) + 1} lines. "
+                f"Only the first {len(head)} chars are shown. Use read_tool_output('{oid}', offset) or "
+                f"grep_tool_output('{oid}', pattern) to see the rest.]")
+
+    def _clear_old_tool_results(self) -> dict | None:
+        """Context editing: once the context passes `clear_tool_results_at` of the window, replace all but the
+        most recent tool results with a short stub (cheaper than summarizing; the trail of calls stays)."""
+        system = [{"role": "system", "content": self.system_prompt()}]
+        used = self.llm.count_tokens(system + self.messages)
+        if used < self.clear_tool_results_at * self.llm.context_window:
+            return None
+        tool_idx = [i for i, m in enumerate(self.messages) if m["role"] == "tool"
+                    and not str(m.get("content", "")).startswith("[cleared")]
+        cleared = 0
+        for i in tool_idx[: max(0, len(tool_idx) - self.keep_tool_results)]:
+            m = self.messages[i]
+            saved = re.search(r"\[Full output saved as `([^`]+)`", m["content"])
+            note = f" Saved as `{saved.group(1)}` (read_tool_output)." if saved else ""
+            m["content"] = (f"[cleared to save context: earlier {m.get('name', 'tool')} result, "
+                            f"{len(m['content'])} chars.{note} Re-run the tool if you need it again.]")
+            cleared += 1
+        if not cleared:
+            return None
+        return self._emit({"type": "context_edit", "cleared_tool_results": cleared, "tokens_before": used})
+
     # ------------------------------------------------------------------ prompt
     def system_prompt(self) -> str:
         parts = [BASE_PROMPT.format(os=f"{platform.system()} {platform.release()}", cwd=self.workdir,
@@ -167,6 +272,9 @@ class Agent:
                 parts.append(f"## Project instructions ({fname})\n{p.read_text(encoding='utf-8')[:20000]}")
         if self.system_extra:
             parts.append(self.system_extra)
+        if self.todos:
+            parts.append("## Current plan (update with update_plan)\n" + "\n".join(
+                f"{i}. [{'x' if t['done'] else ' '}] {t['step']}" for i, t in enumerate(self.todos, 1)))
         return "\n\n".join(parts)
 
     # ------------------------------------------------------------------ events
@@ -220,9 +328,9 @@ class Agent:
         try:
             while steps < self.max_steps:
                 steps += 1
-                ev = self._maybe_compact()
-                if ev:
-                    yield ev
+                for ev in (self._clear_old_tool_results(), self._maybe_compact()):
+                    if ev:
+                        yield ev
                 messages = [{"role": "system", "content": self.system_prompt()}] + self.messages
                 comp: Completion = self.llm.complete(messages, self.tools)
                 self._add(comp.assistant_message())
@@ -270,9 +378,13 @@ class Agent:
                     out, ok = f"Error: bad arguments for {call.name}: {e}. Schema: {json.dumps(t.parameters)}", False
                 except Exception as e:
                     out, ok = f"Error: {type(e).__name__}: {e}", False
+                full_chars = len(out)
+                if ok:
+                    out = self._offload(call.id, call.name, out)
                 out = truncate(out, self.max_tool_chars)
                 yield self._emit({"type": "tool_result", "id": call.id, "name": call.name, "ok": ok,
-                                  "chars": len(out), "ms": int((time.time() - t0) * 1000), "preview": out[:300]})
+                                  "chars": full_chars, "offloaded": full_chars > len(out),
+                                  "ms": int((time.time() - t0) * 1000), "preview": out[:1500]})
         self._add({"role": "tool", "tool_call_id": call.id, "name": call.name, "content": out})
 
     # ------------------------------------------------------------------ sub-agents

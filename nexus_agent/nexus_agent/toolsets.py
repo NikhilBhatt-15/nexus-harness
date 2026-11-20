@@ -233,20 +233,26 @@ _DESTRUCTIVE_SQL = re.compile(r"^\s*(drop|truncate|alter)\b|^\s*delete\s+from\s+
 class _DB:
     """Tiny adapter over sqlite3 or SQLAlchemy (for postgres/mysql/...)."""
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, read_only: bool = False):
         self.url = url
         self.lock = threading.Lock()
         if url.startswith("sqlite:///") or not re.match(r"^\w+(\+\w+)?://", url):
             path = url.removeprefix("sqlite:///")
-            self.kind, self.conn = "sqlite", sqlite3.connect(path, check_same_thread=False)
+            if read_only and path != ":memory:":
+                self.kind, self.conn = "sqlite", sqlite3.connect(f"file:{Path(path).resolve().as_posix()}?mode=ro",
+                                                                 uri=True, check_same_thread=False)
+            else:
+                self.kind, self.conn = "sqlite", sqlite3.connect(path, check_same_thread=False)
         else:
             from sqlalchemy import create_engine  # optional dependency
 
             self.kind, self.engine = "sqlalchemy", create_engine(url)
 
-    def run(self, sql: str, params: list | dict | None = None, limit: int = 200) -> tuple[list[str], list[list], int]:
+    def run(self, sql: str, params: list | dict | None = None, limit: int = 200,
+            query_only: bool = False) -> tuple[list[str], list[list], int]:
         with self.lock:
             if self.kind == "sqlite":
+                self.conn.execute(f"PRAGMA query_only={1 if query_only else 0}")
                 cur = self.conn.execute(sql, params or [])
                 cols = [d[0] for d in cur.description] if cur.description else []
                 rows = [list(r) for r in cur.fetchmany(limit + 1)] if cols else []
@@ -296,7 +302,7 @@ def _fmt_rows(cols: list[str], rows: list[list], limit: int) -> str:
 
 def sql(url: str, *, name: str = "db", read_only: bool = False, row_limit: int = 200) -> Toolset:
     """Any SQL database. ``url``: a sqlite file path, ``sqlite:///path``, or a SQLAlchemy URL."""
-    db = _DB(url)
+    db = _DB(url, read_only=read_only)
 
     @tool(name=f"{name}_schema")
     def db_schema() -> str:
@@ -313,7 +319,7 @@ def sql(url: str, *, name: str = "db", read_only: bool = False, row_limit: int =
         """
         if not _READ_SQL.match(query):
             return f"Error: {name}_query is read-only; use {name}_execute for writes."
-        cols, rows, _ = db.run(query, params, row_limit)
+        cols, rows, _ = db.run(query, params, row_limit, query_only=True)
         return _fmt_rows(cols, rows, row_limit)
 
     @tool(name=f"{name}_execute", risk="write")

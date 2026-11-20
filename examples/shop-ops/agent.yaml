@@ -1,12 +1,12 @@
-# nxa chat -c examples/shop-ops/agent.yaml --workdir examples/shop-ops/workspace
+# nxa chat -c examples/shop-ops/agent.yaml      (paths below are relative to this file)
 model: gemini/gemini-3.1-flash-lite
 permissions: auto          # reads + db writes allowed; shell/destructive need approval
 max_steps: 25
-workdir: examples/shop-ops/workspace   # AGENTS.md / skills are read from here
+workdir: workspace         # AGENTS.md is read from here
 system: You are the operations assistant for a small kitchenware shop. Today is 2026-11-20.
-skills_dirs: [examples/shop-ops/skills]
+skills_dirs: [skills]
 toolsets:
-  - sqlite: {path: examples/shop-ops/workspace/shop.db, name: shop}
-  - knowledge: {slug: shop-policies, source: examples/shop-ops/workspace/docs, root: contexts}
-  - files: {root: examples/shop-ops/workspace}
-  - memory: {path: examples/shop-ops/.nxa/memory.json}
+  - sqlite: {path: workspace/shop.db, name: shop}
+  - knowledge: {slug: shop-policies, source: workspace/docs, root: ../../contexts}
+  - files: {root: workspace}
+  - memory: {path: .nxa/memory.json}

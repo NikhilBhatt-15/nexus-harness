@@ -96,9 +96,11 @@ class Session:
     def list() -> list[dict]:
         out = []
         for p in sorted(sessions_dir().glob("*.jsonl"), reverse=True):
-            first = next((json.loads(line) for line in open(p, encoding="utf-8") if line.strip()), {})
-            n = sum(1 for line in open(p, encoding="utf-8") if '"type": "message"' in line)
-            out.append({"id": p.stem, "messages": n, "model": first.get("model"), "title": first.get("title")})
+            recs = [json.loads(line) for line in open(p, encoding="utf-8") if line.strip()]
+            first = recs[0] if recs else {}
+            msgs = [r["message"] for r in recs if r.get("type") == "message"]
+            title = first.get("title") or next((m["content"][:70] for m in msgs if m.get("role") == "user"), None)
+            out.append({"id": p.stem, "messages": len(msgs), "model": first.get("model"), "title": title})
         return out
 
 

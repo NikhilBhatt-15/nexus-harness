@@ -40,8 +40,17 @@ from nexus_agent.runtime import Permissions
 from nexus_agent.tools import Toolset
 
 
-def toolset_from_entry(kind: str, opts: dict | None) -> Toolset:
+PATH_KEYS = ("path", "root", "source")
+
+
+def toolset_from_entry(kind: str, opts: dict | None, base: str | Path | None = None) -> Toolset:
+    """``base``: directory that relative paths in opts (path/root/source) are resolved against."""
     opts = dict(opts or {})
+    if base is not None:
+        for k in PATH_KEYS:
+            v = opts.get(k)
+            if isinstance(v, str) and v != ":memory:" and "://" not in v and not Path(v).is_absolute():
+                opts[k] = str((Path(base) / v).resolve())
     if kind == "files":
         return T.files(opts.pop("root", "."), **opts)
     if kind == "shell":
@@ -111,16 +120,23 @@ def load_config(path: str | Path | None) -> dict:
                 break
     if path is None:
         return {}
-    return yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    cfg = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    cfg["_dir"] = str(Path(path).resolve().parent)  # relative paths in the config resolve against its folder
+    return cfg
 
 
 def build_agent(cfg: dict, *, model: str | None = None, tool_spec: str | None = None, workdir: str = ".",
                 mode: str | None = None, approver=None, on_event=None, session: Any = None,
                 max_steps: int | None = None) -> Agent:
+    base = cfg.get("_dir")
+
+    def rel(p: str) -> str:
+        return str((Path(base) / p).resolve()) if base and not Path(p).is_absolute() else p
+
     toolsets: list[Toolset] = []
     for entry in cfg.get("toolsets", []) or []:
         (kind, opts), = entry.items() if isinstance(entry, dict) else ((entry, {}),)
-        toolsets.append(toolset_from_entry(kind, opts))
+        toolsets.append(toolset_from_entry(kind, opts, base))
     if tool_spec:
         toolsets += parse_tool_spec(tool_spec, workdir)
     perms = Permissions(mode or cfg.get("permissions", "auto"), approver,
@@ -128,7 +144,7 @@ def build_agent(cfg: dict, *, model: str | None = None, tool_spec: str | None = 
     model = model or cfg.get("model")
     if not model:
         raise SystemExit("No model: pass -m MODEL or set `model:` in agent.yaml")
-    return Agent(model, toolsets, system=cfg.get("system"), workdir=cfg.get("workdir", workdir), permissions=perms,
+    return Agent(model, toolsets, system=cfg.get("system"), workdir=rel(cfg["workdir"]) if cfg.get("workdir") else workdir, permissions=perms,
                  max_steps=max_steps or cfg.get("max_steps", 50), max_cost_usd=cfg.get("max_cost_usd"),
                  llm_params=cfg.get("llm"), on_event=on_event, session=session,
-                 skills_dirs=cfg.get("skills_dirs"))
+                 skills_dirs=[rel(d) for d in cfg["skills_dirs"]] if cfg.get("skills_dirs") else None)

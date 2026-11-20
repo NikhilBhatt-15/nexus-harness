@@ -102,6 +102,24 @@ for ev in agent.stream("and the next one?"):   # events: user, assistant, tool_c
 | `POST /v1/runs/{id}/approve {"allow": true}` | Answers a pending approval. |
 | `GET /v1/runs/{id}/events?after=N` or `/stream` (SSE) | Live events. |
 
+## Web UI and terminal
+
+- **Web UI:** `nxa serve -c agent.yaml`, then open http://127.0.0.1:8787. It has chat, live tool-call cards (arguments and results), **Allow/Deny buttons** for risky tools, a plan panel, context notices (offloaded output, cleared results, summaries, model retries), cost per turn, and a session list you can reopen.
+- **Terminal:** `nxa chat -c agent.yaml` is an interactive chat with colored tool calls, approval prompts and slash commands. `nxa run "..." --json` streams JSON events.
+
+## Context and memory management
+
+| Mechanism | What it does |
+|---|---|
+| **Tool-result offloading** | Outputs longer than `offload_chars` (6,000) are saved to `~/.nexus-agent/artifacts/<session>/`. The model sees a 2,000-char preview and a handle, and pages or searches the rest with `read_tool_output` / `grep_tool_output`. |
+| **Clearing old tool results** | At 50% of the context window, all but the 6 most recent tool results are replaced by short stubs that point to their saved copy. The trail of calls stays, the bulk goes. |
+| **Compaction** | At 75%, older turns are summarized by the model and replaced by the summary. The full history stays in the session file. |
+| **Plan** | `update_plan` keeps a checklist that is re-shown in the system prompt every step. |
+| **Memory** | The `memory` toolset stores notes that persist across sessions and are injected at start. |
+| **Sessions** | A JSONL log of every message and event; resume (`--resume last`) or fork. |
+| **Instructions and skills** | `AGENTS.md` / `CLAUDE.md` from the workdir. `SKILL.md` files are listed in the prompt and loaded on demand. |
+| **Retries** | Rate limits and overload are retried with backoff (shown live as `retry` events). Daily quota exhaustion stops the run cleanly. |
+
 ## Attaching your systems
 
 | You have | Attach | The agent gets |

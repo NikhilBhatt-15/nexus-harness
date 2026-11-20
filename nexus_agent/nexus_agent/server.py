@@ -51,8 +51,13 @@ def create_app(config_path: str | None = None) -> FastAPI:
 
     def worker(run: dict, agent, task: str) -> None:
         run["status"] = "running"
-        for ev in agent.stream(task):
-            run["events"].append(ev)
+        # collect via on_event so events emitted during a blocking model call (retries) show up live
+        agent.on_event = run["events"].append
+        try:
+            for _ in agent.stream(task):
+                pass
+        finally:
+            agent.on_event = None
         done = run["events"][-1]
         run.update(status="completed", result={k: done.get(k) for k in
                                                ("text", "stop_reason", "steps", "tool_calls", "cost_usd", "error")})
@@ -127,11 +132,45 @@ def create_app(config_path: str | None = None) -> FastAPI:
     def sessions():
         return Session.list()
 
+    @app.get("/v1/sessions/{session_id}/messages", dependencies=[Depends(auth)])
+    def session_messages(session_id: str):
+        from nexus_agent.runtime import sessions_dir
+
+        if not (sessions_dir() / f"{session_id}.jsonl").exists():
+            raise HTTPException(404, "session not found")
+        return Session(session_id).messages()
+
+    @app.get("/v1/info", dependencies=[Depends(auth)])
+    def info():
+        from nexus_agent.config import toolset_from_entry
+
+        sets = []
+        for e in cfg.get("toolsets", []) or []:
+            try:
+                sets.append(toolset_from_entry(*next(iter(e.items())), cfg.get("_dir")).describe())
+            except Exception as ex:  # show misconfigured toolsets instead of failing the page
+                sets.append(f"{next(iter(e))}: (error: {ex})")
+        from pathlib import Path
+
+        from nexus_agent.runtime import load_skills
+
+        skills = [s.name for s in load_skills([Path(cfg.get('_dir', '.')) / d for d in cfg.get('skills_dirs') or []])]
+        return {"model": cfg.get("model"), "mode": cfg.get("permissions", "auto"), "toolsets": sets,
+                "skills": skills}
+
+    @app.get("/", include_in_schema=False)
+    def index():
+        from pathlib import Path
+
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse((Path(__file__).parent / "web" / "index.html").read_text(encoding="utf-8"))
+
     @app.get("/v1/tools", dependencies=[Depends(auth)])
     def tools():
         from nexus_agent.config import toolset_from_entry
 
-        return [toolset_from_entry(*next(iter(e.items()))).describe() for e in cfg.get("toolsets", [])]
+        return [toolset_from_entry(*next(iter(e.items())), cfg.get("_dir")).describe() for e in cfg.get("toolsets", [])]
 
     return app
 

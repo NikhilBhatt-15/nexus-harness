@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -331,3 +332,61 @@ def test_relay_llm(tmp_path):
     r = agent.run("write r.txt")
     th.join()
     assert r.stop_reason == "done" and r.text == "wrote it" and (tmp_path / "r.txt").read_text() == "relay"
+
+
+def test_offload_large_output_and_read_back(tmp_path):
+    big = "\n".join(f"row {i}: value {i * 7}" for i in range(2000))
+    script = [Completion(tool_calls=[call("dump")])]
+
+    def drive(messages, tools):
+        last = messages[-1]
+        if last["role"] == "tool" and last["name"] == "dump":
+            oid = re.search(r"saved as `([^`]+)`", last["content"]).group(1)
+            return Completion(tool_calls=[call("grep_tool_output", output_id=oid, pattern=r"^row 1999:")])
+        if last["role"] == "tool":
+            return Completion(text=last["content"])
+        return script.pop(0)
+
+    agent = Agent(FakeLLM(drive), [tool(lambda: big, name="dump")], workdir=tmp_path, offload_chars=1000,
+                  preview_chars=300)
+    r = agent.run("dump it")
+    dump_msg = next(m for m in agent.messages if m.get("name") == "dump")
+    assert len(dump_msg["content"]) < 1000 and "Full output saved as" in dump_msg["content"]
+    assert "row 1999: value 13993" in r.text
+    ev = next(e for e in r.events if e["type"] == "tool_result" and e["name"] == "dump")
+    assert ev["offloaded"] and ev["chars"] == len(big)
+
+
+def test_clear_old_tool_results_and_plan(tmp_path, monkeypatch):
+    monkeypatch.setenv("NXA_CONTEXT_WINDOW", "4000")
+    text = " ".join(f"tok{i}" for i in range(250))
+
+    def drive(messages, tools):
+        n = sum(1 for m in messages if m["role"] == "tool")
+        if n == 0:
+            return Completion(tool_calls=[call("update_plan", items=["look", "answer"], done=[1])])
+        return Completion(tool_calls=[call("peek")]) if n < 9 else Completion(text="done")
+
+    agent = Agent(FakeLLM(drive), [tool(lambda: text, name="peek")], workdir=tmp_path, keep_tool_results=2,
+                  clear_tool_results_at=0.3, compact_at=0.99)
+    events = list(agent.stream("go"))
+    assert any(e["type"] == "context_edit" for e in events)
+    assert any(str(m.get("content", "")).startswith("[cleared") for m in agent.messages)
+    assert "1. [x] look" in agent.system_prompt() and "2. [ ] answer" in agent.system_prompt()
+
+
+def test_web_ui_and_info_endpoints(tmp_path):
+    from fastapi.testclient import TestClient
+
+    import nexus_agent.server as srv
+
+    cfg = tmp_path / "agent.yaml"
+    cfg.write_text("model: fake\npermissions: ask\ntoolsets:\n  - web: {}\n", encoding="utf-8")
+    c = TestClient(srv.create_app(str(cfg)))
+    assert "nexus-agent" in c.get("/").text
+    info = c.get("/v1/info").json()
+    assert info["model"] == "fake" and info["mode"] == "ask" and info["toolsets"][0].startswith("web:")
+    s = Session()
+    s.add_message({"role": "user", "content": "hello there"})
+    assert c.get(f"/v1/sessions/{s.id}/messages").json()[0]["content"] == "hello there"
+    assert any(x["title"] == "hello there" for x in c.get("/v1/sessions").json())
